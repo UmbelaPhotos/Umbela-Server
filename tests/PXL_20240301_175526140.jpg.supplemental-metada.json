@@ -1,0 +1,30 @@
+{
+  "title": "PXL_20240301_175526140.jpg",
+  "description": "",
+  "imageViews": "4",
+  "creationTime": {
+    "timestamp": "1709315729",
+    "formatted": "Mar 1, 2024, 5:55:29 PM UTC"
+  },
+  "photoTakenTime": {
+    "timestamp": "1709315726",
+    "formatted": "Mar 1, 2024, 5:55:26 PM UTC"
+  },
+  "geoData": {
+    "latitude": 0.0,
+    "longitude": 0.0,
+    "altitude": 0.0,
+    "latitudeSpan": 0.0,
+    "longitudeSpan": 0.0
+  },
+  "archived": true,
+  "url": "https://photos.google.com/photo/AF1QipPPZFwiPr31lJYJwGYJJIoeVSe2Da3eVzzGDU1W",
+  "googlePhotosOrigin": {
+    "mobileUpload": {
+      "deviceFolder": {
+        "localFolderName": ""
+      },
+      "deviceType": "ANDROID_PHONE"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+# Binarios compilados
+build/
+dist/
+allium-desktop
+allium-node
+allium-desktop-*
+allium-node-*
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+tmp/
+
+# Tests y cobertura
+*.test
+*.out
+coverage.html
+coverage.txt
+
+# Go workspace
+go.work
+go.work.sum
+
+# Archivos de prueba generados
+tests/test_thumbs/
+!tests/*.go
+
+# Secretos y certificados
+.env
+.env.*
+*.key
+*.pem
+*.p12
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Frontend
+ui/node_modules/
+ui/dist/
+ui/.env
+ui/.env.*
+
+# Base de datos (datos de usuario, nunca al repo)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Tor
+tor-data/
+hidden_service/
+
+# Frontend compilado embebido en Go
+internal/ui/dist/
+
+# Datos de usuario en desarrollo
+profile/
+data/
+allium-data/
+.allium/
