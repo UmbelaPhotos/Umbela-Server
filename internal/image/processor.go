@@ -25,21 +25,20 @@ import (
 	"golang.org/x/image/webp"
 )
 
-// ProcessResult contiene el resultado de procesar una imagen.
+// ProcessResult has the result of processing an image.
 type ProcessResult struct {
-	ThumbPath string // Ruta absoluta al thumbnail generado
-	Blurhash  string // Cadena blurhash para placeholder de carga
-	Width     int    // Ancho original de la imagen en píxeles
-	Height    int    // Alto original de la imagen en píxeles
+	ThumbPath string // Absolute route to the thumbnail
+	Blurhash  string // Blurhash string
+	Width     int    // Original width of the image
+	Height    int    // Original height of the image
 }
 
-// Processor encapsula la configuración para el procesamiento de imágenes.
-// Inicializar una vez y reutilizar (govips no es barato de arrancar).
+// The processor saves the configuration of Govips, so it only starts once.
 type Processor struct {
 	copyPath 	string
-	thumbsDir   string // Directorio donde guardar los thumbnails
-	thumbWidth  int    // Ancho objetivo del thumbnail en píxeles
-	thumbHeight int    // Alto objetivo (0 = proporcional al ancho)
+	thumbsDir   string // Thumbnails dir
+	thumbWidth  int    // Target width in pixels
+	thumbHeight int    // Target height (0 = proportional to width)
 }
 
 type EXIFData struct {
@@ -55,7 +54,7 @@ type GoogleMetadata struct {
 	Title          string `json:"title"`
 	Description    string `json:"description"`
 	PhotoTakenTime struct {
-		Timestamp string `json:"timestamp"` // Google lo manda como texto "1619998800"
+		Timestamp string `json:"timestamp"` // Google saves it like "1619998800"
 		Formatted string `json:"formatted"`
 	} `json:"photoTakenTime"`
 	GeoData struct {
@@ -64,105 +63,88 @@ type GoogleMetadata struct {
 	} `json:"geoData"`
 }
 
-// NewProcessor crea un Processor y arranca el runtime de govips.
-// Debe llamarse una sola vez al inicio de la aplicación.
-//
+// NewProcessor creates a new Processor and creates the Govips runtime.
+// Called once at the start
 // Input:  thumbsDir string, thumbWidth int, thumbHeight int
-// Output: *Processor listo, o error si govips no puede iniciar
+// Output: *Processor ready, or an error if there was an issue with govips
 func NewProcessor(thumbsDir string, thumbWidth, thumbHeight int) (*Processor, error) {
-	// TODO: Implementar
-	// 1. Llamar govips.Startup(nil) para iniciar libvips
-	// 2. os.MkdirAll(thumbsDir, 0755) para asegurar el directorio
-	// 3. Devolver &Processor{...}
-	vips.Startup(nil)
+	err:= vips.Startup(nil)
+	if err!= nil{
+		return nil, fmt.Errorf("starting new process of govips %w", err)
+	}
 	os.MkdirAll(thumbsDir, 0755)
 	return &Processor{thumbsDir: thumbsDir, thumbWidth: thumbWidth, thumbHeight: thumbHeight}, nil
 }
 
-// Shutdown limpia los recursos de govips. Llamar con defer al cerrar la app.
+// Shutdown cleans the resources of govips. Use with defer after initializing.
 func (p *Processor) Shutdown() {
-	// TODO: Implementar
-	// 1. Llamar govips.Shutdown()
 	vips.Shutdown()
 }
 
-// GenerateThumbnail crea un thumbnail a partir de la imagen en srcPath,
-// la guarda en thumbsDir/<hash>.webp y devuelve el ProcessResult.
+// GenerateThumbnail creates the thumbnail of theimage in the srcPath,
+// It saves it in thumbsDir/<hash>.webp and returns ProcessResult.
+// Input:  srcPath string — og image
+//  	   hash string    — hash SHA256 of the file (used as name of the thumbnail)
 //
-// La conversión a WebP es obligatoria para eficiencia en la galería web.
-//
-// Input:  srcPath string — ruta al archivo de imagen original
-//
-//	hash string    — hash SHA256 del archivo (usado como nombre del thumb)
-//
-// Output: ProcessResult con ThumbPath y dimensiones, o error
+// Output: ProcessResult with ThumbPath and dimensions, or an error
 func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string) (*ProcessResult, error) {
-	// 1. Definir la ruta final donde se guardará el archivo (.webp)
 	thumbPath := filepath.Join(p.thumbsDir, hash+".webp")
-
-	// 2. Cargar la imagen original en memoria a través del motor global de vips
 	vipsImage, err := vips.NewImageFromFile(srcPath)
+
 	if err != nil {
-		return nil, fmt.Errorf("error al abrir imagen original: %w", err)
+		return nil, fmt.Errorf("opening image with govips: %w", err)
 	}
-	// Nos aseguramos de liberar la memoria de esta imagen individual al terminar la función
 	defer vipsImage.Close()
 
-	// Guardamos las dimensiones originales antes de cambiarles el tamaño
+	// original dimensions
 	originalWidth := vipsImage.Width()
 	originalHeight := vipsImage.Height()
 
-	// 3. CORRECCIÓN DEL RESIZE: Convertimos a float64 para obtener el porcentaje decimal exacto
-	// Ejemplo: 200.0 / 1920.0 = 0.1041 (Reducir al 10.4%)
+	// Reducing the image with Lanczos3 algorithm
 	scale := float64(p.thumbWidth) / float64(originalWidth)
-
-	// Aplicamos el redimensionado usando el algoritmo matemático Lanczos
 	err = vipsImage.Resize(scale, vips.KernelLanczos3)
 	if err != nil {
-		return nil, fmt.Errorf("error al redimensionar imagen: %w", err)
+		return nil, fmt.Errorf("scailing image: %w", err)
 	}
 
-	// 4. Exportar la imagen procesada a formato WebP (esto nos da una lista de bytes)
+	// export to webp
 	webpBytes, _, err := vipsImage.ExportWebp(vips.NewWebpExportParams())
-
 	if err != nil {
-		return nil, fmt.Errorf("error al exportar a WebP: %w", err)
+		return nil, fmt.Errorf("exporting to webp: %w", err)
 	}
 
 	goImg, err := webp.Decode(bytes.NewReader(webpBytes))
 	if err != nil {
-		return nil, fmt.Errorf("error decodificando webp para blurhash: %w", err)
+		return nil, fmt.Errorf("decoding webp: %w", err)
 	}
 
+	// Blurhash
 	imageBlurhash, err := blurhash.Encode(4, 3, goImg)
-	fmt.Println(imageBlurhash)
-	// 5. Guardar esos bytes en el disco duro en la ruta que armamos al principio
+	
+	// save webp image
 	err = os.WriteFile(thumbPath, webpBytes, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("error al guardar el archivo en disco: %w", err)
+		return nil, fmt.Errorf("writing files on disk: %w", err)
 	}
 
-	// 6. Devolver el resultado con los datos de la imagen ORIGINAL y la ruta del thumbnail
 	return &ProcessResult{
 		ThumbPath: thumbPath,
-		Blurhash:  imageBlurhash, // (Por ahora vacío como dice tu struct)
+		Blurhash:  imageBlurhash, 
 		Width:     originalWidth,
 		Height:    originalHeight,
 	}, nil
 }
 
+// Make the SHA256 hash of the file 
 // Input:  filePath string — ruta al archivo a hashear
 // Output: string hexadecimal del hash (64 caracteres), o error de I/O
 func ComputeSHA256(filePath string) (string, error) {
-	// TODO: Implementar
-	// 1. os.Open(filePath)
-	// 2. sha256.New() + io.Copy(hasher, file)
-	// 3. fmt.Sprintf("%x", hasher.Sum(nil))
 	openedFile, err := os.Open(filePath)
 	if err != nil {
-		return "", fmt.Errorf("Error : %w", err)
+		return "", fmt.Errorf("opening file %w", err)
 	}
 	defer openedFile.Close()
+
 	hasher := sha256.New()
 	_, err = io.Copy(hasher, openedFile)
 	if err != nil {
@@ -189,7 +171,7 @@ func ExtractEXIF(srcPath string) (*EXIFData, error) {
 				return imageMetadata, nil
 			}
 			fmt.Printf("Warning: Could not decode EXIF for %s: %v\n", srcPath, err)
-			return &EXIFData{}, nil
+			return imageMetadata, nil
 		}
 	}
 
@@ -219,13 +201,13 @@ func ExtractEXIF(srcPath string) (*EXIFData, error) {
 	return imageMetadata, nil
 }
 
+// This only works with Google Takout's json format
 func ProcessMetadataJSON(srcPath string) (*EXIFData, error) {
-	// This only works with Google Takout's json format
 	imageMetadata := &EXIFData{}
 
 	f, err := os.Open(srcPath)
 	if err != nil {
-		return nil, fmt.Errorf("Coudnt open the file: %w", err)
+		return nil, fmt.Errorf("openning the json file: %w", err)
 	}
 	defer f.Close()
 

@@ -29,9 +29,9 @@ func (r *AlbumRepository) GetByID(ctx context.Context, id int64) (*models.Album,
 	err := r.db.NewSelect().Model(&album).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows){
-			return nil, fmt.Errorf("Theres no album with that id. %w", err)
+			return nil, fmt.Errorf("no album with that id. %w", err)
 		}
-		return nil, fmt.Errorf("An error occurred: %w", err) 
+		return nil, fmt.Errorf("trying to get the image by id: %w", err) 
 	}
 
 	return &album, nil 
@@ -50,7 +50,7 @@ func (r *AlbumRepository) ListPaginated(ctx context.Context, limit int, offset i
 func (r *AlbumRepository) Delete(ctx context.Context, id int64) error{
 	result, err := r.db.NewDelete().Model((*models.Album)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-    	return fmt.Errorf("error deleting album %d: %w", id, err)
+    	return fmt.Errorf("deleting album %d: %w", id, err)
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
