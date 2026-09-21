@@ -1,9 +1,8 @@
-// Package core es el "cerebro" de Allium. Coordina todos los subsistemas:
-// base de datos, procesamiento de imágenes, servidor HTTP y red Tor.
+// Package core is the "brain" of Allium. It controls the following packages:
+// databases, image processing, http server and TOR network.
 //
-// La App es el punto de entrada único para toda la funcionalidad de negocio.
-// Tanto el binario CLI (allium-node) como el GUI (allium-desktop) crean
-// una instancia de App y llaman a sus métodos.
+// The app is the entrance for all the funcionality.
+// allium-node and allium-desktop create an instance of App and call its methods
 package core
 
 import (
@@ -22,28 +21,31 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// App es el núcleo de la aplicación Allium.
-// Contiene y coordina todos los subsistemas.
+// App is the nuclei of Allium
+// Contains and coordinates all its methods
 type App struct {
 	cfg    models.Config
 	db     *bun.DB
 	server *api.Server
 	log    *slog.Logger
-	// TODO: añadir cuando se implementen los paquetes:
 	processor *image.Processor
 	torCtrl   *tor.Controller
 	photoRepo *storage.PhotoRepository
 }
 
-// New crea una nueva instancia de App con la configuración dada.
-// No arranca ningún servicio; llamar Start() para eso.
+// New creates a new instance with the configuration given
+// Doesnt call any method, use Start() for that
 //
-// Input:  cfg models.Config — configuración completa
-// Output: *App, error si la configuración es inválida
+// Input:  cfg models.Config — complete configuration
+// Output: *App, error 
 func New(cfg models.Config) (*App, error) {
-	// TODO: Implementar validación de cfg
-	// 1. Verificar que cfg.DataDir no está vacío
-	// 2. Verificar que cfg.WorkerCount > 0
+	if cfg.DataDir == "" {
+		return nil, fmt.Errorf("invalid config: no value in DataDir")
+	}
+	if cfg.WorkerCount<=0{
+		return nil, fmt.Errorf("invalid config: worker value less than 1")
+	}
+
 	logger := slog.Default()
 	return &App{
 		cfg: cfg,
@@ -51,33 +53,33 @@ func New(cfg models.Config) (*App, error) {
 	}, nil
 }
 
-// Start arranca todos los subsistemas en orden de dependencias:
-//  1. Base de datos (siempre primero)
-//  2. Procesador de imágenes
-//  3. Servidor HTTP
-//  4. Tor (si está habilitado en cfg)
+// Start starts all the subsistems in the following order:
+//  1. Database
+//  2. image processing
+//  3. HTTP server # TODO: Remove
+//  4. Tor (if enabled)
 //
-// Si algún subsistema falla, hace rollback de los anteriores.
+// If any subsistem fails, makes a rollback to the last one.
 //
-// Input:  ctx context.Context — cancelar esto apaga la app
-// Output: error si algún subsistema no puede arrancar
+// Input:  ctx context.Context — cancel this shutsdown the app
+// Output: error if a subsistem fails
 func (a *App) Start(ctx context.Context) error {
-	a.log.Info("arrancando Allium", "version", "0.1.0-dev")
+	a.log.Info("Starting Allium", "version", "0.1.0-dev")
 
-	// [1] Base de datos
+	// Database
 	database, err := db.InitDB(a.cfg.DBPath)
 	if err != nil {
-		return fmt.Errorf("fallo al iniciar BD: %w", err)
+		return fmt.Errorf("starting db: %w", err)
 	}
 	a.db = database
-	a.log.Info("base de datos lista", "path", a.cfg.DBPath)
+	a.log.Info("database ready", "path", a.cfg.DBPath)
 
-	// [2] Procesador de imágenes
-	// TODO: cuando image.Processor esté implementado:
+	// image processing
 	processor, err := image.NewProcessor(a.cfg.ThumbsDir, a.cfg.ThumbWidth, a.cfg.ThumbHeight)
-	if err != nil { return fmt.Errorf("fallo al iniciar procesador: %w", err) }
+	if err != nil { return fmt.Errorf("initializing image processor: %w", err) }
+	defer processor.Shutdown()
 	a.processor = processor
-	a.log.Info("procesador de imágenes pendiente de implementación")
+	a.log.Info("image processor ready")
 
 	// [3] Servidor HTTP
 	photoRepo := storage.NewPhotoRepository(a.db)

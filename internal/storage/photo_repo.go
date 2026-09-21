@@ -1,6 +1,6 @@
-// Package storage maneja el acceso a datos (CRUD) para los modelos del dominio.
-// Cada archivo en este paquete contiene un "repositorio" para un modelo específico.
-// Los repositorios son la ÚNICA capa que habla directamente con *bun.DB.
+// Package storage manages the data access (CRUD) for the models of the domain.
+// Every file in this package has a repository for the specific model.
+// This repositories are the only ones that talk to bun
 package storage
 
 import (
@@ -14,53 +14,49 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// PhotoRepository encapsula todas las operaciones de BD para el modelo Photo.
+// PhotoRepository encapsulates all the operations of the photo model.
 type PhotoRepository struct {
 	db *bun.DB
 }
 
-// NewPhotoRepository crea una nueva instancia del repositorio de fotos.
+// NewPhotoRepository creates a new instance of the Photo repository.
 //
-// Input:  *bun.DB — conexión activa a la base de datos
-// Output: *PhotoRepository listo para usar
+// Input:  *bun.DB — connection to the database
+// Output: *PhotoRepository ready to use
 func NewPhotoRepository(db *bun.DB) *PhotoRepository {
 	return &PhotoRepository{db: db}
 }
 
-// Save inserta una nueva Photo en la BD. Si ya existe una foto con el mismo
-// Hash (deduplicación), devuelve el registro existente sin error.
+// Save saves a new Photo in the DB.If there already exists a photo with the same 
+// Hash (deduplication), returns the instance without an error.
 //
-// Input:  ctx context.Context, photo *models.Photo con todos los campos requeridos
-// Output: error si la inserción falla por razón distinta a duplicado
+// Input:  ctx context.Context, photo *models.Photo with all required fields
+// Output: error if the insert fails for another unexpected reason
 func (r *PhotoRepository) Save(ctx context.Context, photo *models.Photo) error {
 	_, err := r.db.NewInsert().Model(photo).On("CONFLICT (hash) DO NOTHING").Exec(ctx)
 	return err
 }
 
-// GetByID busca una foto por su ID primario.
+// GetByID searches a Photo by its id.
 //
 // Input:  ctx context.Context, id int64
-// Output: *models.Photo encontrada, o error si no existe / fallo de BD
+// Output: *models.Photo found, or error if it doesnt exists / error in the BD
 func (r *PhotoRepository) GetByID(ctx context.Context, id int64) (*models.Photo, error) {
-	// TODO: Implementar
-	// 1. photo := new(models.Photo)
-	// 2. db.NewSelect().Model(photo).Where("id = ?", id).Scan(ctx)
-	// 3. Devolver photo o error
 	photo := new(models.Photo)
 	err := r.db.NewSelect().Model(photo).Where("id = ?", id).Scan(ctx)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) { //errors.Is es para chaecar si un error es de un tipo. sql.ErrNoRows es que no hay
-			return nil, fmt.Errorf("Photo with id %d not found: %w", id, err)
+		if errors.Is(err, sql.ErrNoRows) { 
+			return nil, fmt.Errorf("photo with id %d not found: %w", id, err)
 		}
-		return nil, fmt.Errorf("There was an error trying to get the image you requested: %w", err)
+		return nil, fmt.Errorf("trying to get the image by id: %w", err)
 	}
 	return photo, nil
 }
 
-// GetByHash busca una foto por su hash SHA256 (para deduplicación).
+// GetByHash searchs an image by its SHA256 (for deduplication).
 //
-// Input:  ctx context.Context, hash string — SHA256 hexadecimal del archivo original
-// Output: *models.Photo si existe, nil + nil si no existe
+// Input:  ctx context.Context, hash string — SHA256 hexadecimal of the original image
+// Output: *models.Photo if it exists, nil and nil if it doesnt
 func (r *PhotoRepository) GetByHash(ctx context.Context, hash string) (*models.Photo, error) {
 	photo := new(models.Photo)
 	err := r.db.NewSelect().Model(photo).Where("hash = ?", hash).Scan(ctx)
@@ -73,35 +69,32 @@ func (r *PhotoRepository) GetByHash(ctx context.Context, hash string) (*models.P
 	return photo, nil
 }
 
-// ListPaginated devuelve una página de fotos ordenadas por fecha de captura descendente.
+// ListPaginated returns a page of photos with descending order.
 //
-// Input:  ctx, limit int (fotos por página), offset int (skip)
-// Output: slice de fotos, total de fotos en BD, error
+// Input:  ctx, limit int (Photos per page), offset int (skip)
+// Output: slice de fotos, total of photos in the BD, error
 func (r *PhotoRepository) ListPaginated(ctx context.Context, limit int, offset int) ([]*models.Photo, int, error) {
-	// TODO: Implementar
-	// 1. db.NewSelect().Model(&photos).OrderExpr("captured_at DESC").Limit(limit).Offset(offset).ScanAndCount(ctx)
-	// 2. Devolver fotos, total, nil
 	photos := []*models.Photo{}
 	total, err := r.db.NewSelect().Model(&photos).OrderExpr("captured_at DESC").Limit(limit).Offset(offset).ScanAndCount(ctx)
 	if err != nil {
-		return nil, 0, fmt.Errorf("Error getting the images: %w", err)
+		return nil, 0, fmt.Errorf("getting paginated images: %w", err)
 	}
 	return photos, total, nil
 }
 
-// Delete elimina una foto de la BD por su ID.
-// NOTA: No borra el archivo físico; eso es responsabilidad del caller.
+// Delete a photo from the DB by its ID.
+// NOTE: It doesnt delete the file; that is responsability of the caller.
 //
 // Input:  ctx, id int64
-// Output: error si no existe o fallo de BD
+// Output: error if it doesnt exists or crash in the BD
 func (r *PhotoRepository) Delete(ctx context.Context, id int64) error {
 	result, err := r.db.NewDelete().Model((*models.Photo)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-		return fmt.Errorf("error deleting album %d: %w", id, err)
+		return fmt.Errorf("deleting photo %d: %w", id, err)
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("album %d not found: %w", id, sql.ErrNoRows)
+		return fmt.Errorf("photo %d not found: %w", id, sql.ErrNoRows)
 	}
 	return nil
 }
