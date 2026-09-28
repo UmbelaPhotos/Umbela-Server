@@ -1,4 +1,4 @@
-// Package image provee las funciones de procesamiento de imágenes de Allium.
+// Package image provee las funciones de procesamiento de imágenes de umbela.
 // Utiliza govips (binding de libvips) para operaciones de alta performance
 // como generación de thumbnails y conversión a WebP.
 //
@@ -15,9 +15,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
-	"strconv"
 	"path/filepath"
+	"strconv"
+	"time"
+	"umbela-server/internal/crypto"
 
 	blurhash "github.com/buckket/go-blurhash"
 	"github.com/davidbyttow/govips/v2/vips"
@@ -79,6 +80,11 @@ func NewProcessor(thumbsDir string, thumbWidth, thumbHeight int) (*Processor, er
 // Shutdown cleans the resources of govips. Use with defer after initializing.
 func (p *Processor) Shutdown() {
 	vips.Shutdown()
+}
+
+func (p *Processor) SaveImage(imageBytes []byte, filePath string){
+	// TODO: encryptedBytes, err := crypto.EncryptGCM()
+	return 
 }
 
 // GenerateThumbnail creates the thumbnail of theimage in the srcPath,

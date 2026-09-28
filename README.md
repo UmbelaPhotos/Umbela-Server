@@ -1,6 +1,6 @@
-# 🧅 Allium: Servidor Soberano de Fotos Privadas
+# 🧅 umbela: Servidor Soberano de Fotos Privadas
 
-Allium es un ecosistema de software escrito en **Go** diseñado para convertir cualquier computadora (desde una Raspberry Pi hasta una PC de escritorio) en un servidor privado de fotos. El sistema ingiere datos de Google Takeout, los organiza localmente y los sirve de forma segura exclusivamente a través de la **Red Tor**.
+umbela es un ecosistema de software escrito en **Go** diseñado para convertir cualquier computadora (desde una Raspberry Pi hasta una PC de escritorio) en un servidor privado de fotos. El sistema ingiere datos de Google Takeout, los organiza localmente y los sirve de forma segura exclusivamente a través de la **Red Tor**.
 
 ---
 
@@ -28,10 +28,10 @@ Allium es un ecosistema de software escrito en **Go** diseñado para convertir c
 ## 📂 Estructura de Directorios (Monorepo)
 
 ```text
-allium/
+umbela/
 ├── cmd/
-│   ├── allium-node/     # Binario CLI (Servidor puro / Headless para Raspberry Pi)
-│   └── allium-desktop/  # Binario GUI (Ventana Wails con soporte de comandos CLI)
+│   ├── umbela-node/     # Binario CLI (Servidor puro / Headless para Raspberry Pi)
+│   └── umbela-desktop/  # Binario GUI (Ventana Wails con soporte de comandos CLI)
 ├── internal/
 │   ├── core/            # El "Cerebro" que coordina todo o como lo organices
 │   ├── api/             # Servidor REST (servido localmente y expuesto a la red Tor)
