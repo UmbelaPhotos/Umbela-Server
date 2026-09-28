@@ -1,7 +1,7 @@
 [build]
-  cmd        = "go build -o ./tmp/allium-node ./cmd/allium-node"
-  bin        = "./tmp/allium-node"
-  full_bin   = "./tmp/allium-node --daemon-mode"
+  cmd        = "go build -o ./tmp/umbela-node ./cmd/umbela-node"
+  bin        = "./tmp/umbela-node"
+  full_bin   = "./tmp/umbela-node --daemon-mode"
   include_ext = ["go"]
   exclude_dir = ["tmp", "build", "ui", "vendor"]
   delay      = 500

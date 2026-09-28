@@ -1,10 +1,6 @@
 # Binarios compilados
 build/
 dist/
-allium-desktop
-allium-node
-allium-desktop-*
-allium-node-*
 *.exe
 *.exe~
 *.dll
@@ -65,5 +61,5 @@ internal/ui/dist/
 # Datos de usuario en desarrollo
 profile/
 data/
-allium-data/
-.allium/
+umbela-data/
+.umbela/

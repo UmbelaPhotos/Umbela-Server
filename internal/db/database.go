@@ -5,14 +5,15 @@ package db
 import (
 	"context"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
 
-	"allium-server/internal/models"
+	"umbela-server/internal/models"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/mutecomm/go-sqlcipher/v4"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/sqlitedialect"
 )
@@ -21,26 +22,32 @@ import (
 // activates the WAL mode for better concurrency, and automigrates
 // the models of the domain
 //
-// Input:  dbPath string — path to the .db file (example: "./data/allium.db")
+// Input:  dbPath string — path to the .db file (example: "./data/umbela.db")
 // Output: *bun.DB ready to use, or error.
-func InitDB(dbPath string, username string, password string) (*bun.DB, error) {
+func InitDB(dbPath string, masterkey []byte) (*bun.DB, error) {
 	// Make sure the dir exists
 	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, fmt.Errorf("creating directory: %w", err)
 	}
+
+	hexKey := hex.EncodeToString(masterkey)
 
 	values := url.Values{}
 	values.Add("_journal_mode", "WAL")
 	values.Add("_foreign_keys", "ON")
 	values.Add("_busy_timeout", "5000")
 
+	// SQLCipher
+	values.Add("_pragma_key", fmt.Sprintf("x'%s'", hexKey))
+	values.Add("_pragma_cipher_page_size", "4096") 
+
 	dsn := fmt.Sprintf("%s?%s", dbPath, values.Encode())
 
 	// 2. open standard sql connection
 	sqldb, err := sql.Open("sqlite3", dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening database: %w", err)
 	}
 
 	var success bool
@@ -57,7 +64,7 @@ func InitDB(dbPath string, username string, password string) (*bun.DB, error) {
 		return nil, fmt.Errorf("verifying connection: %w", err)
 	}
 
-	// 4. Connection wit bun
+	// 4. Connection with bun
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 
 	success = true

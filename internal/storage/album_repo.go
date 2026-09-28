@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"allium-server/internal/models"
+	"umbela-server/internal/models"
 
 	"github.com/uptrace/bun"
 )

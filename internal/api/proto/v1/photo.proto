@@ -1,6 +1,6 @@
 syntax = "proto3";
 
 package photo.v1;
-option go_package = "allium-server/internal/api/pb"
+option go_package = "umbela-server/internal/api/pb"
 
 service 

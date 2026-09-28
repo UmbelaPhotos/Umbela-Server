@@ -1,11 +1,12 @@
 package models
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
 
-// Config contains all the runtime config of the Allium server.
+// Config contains all the runtime config of the umbela server.
 type Config struct {
 	DataDir    string `json:"data_dir"`
 	ThumbsDir  string `json:"thumbs_dir"`
@@ -20,22 +21,36 @@ type Config struct {
 	WorkerCount int `json:"worker_count"`
 }
 
-// DefaultConfig returns the configuration with the user home paths.
-func DefaultConfig() Config {
-	home, err := os.UserHomeDir()
+func GetExecutableAndUmbelaPath()(string, string, error){
+	exePath, err := os.Executable()
 	if err != nil {
-		home = "."
+		return "", "", fmt.Errorf("No executable dir: %w", err)
 	}
-	dataDir := filepath.Join(home, ".allium")
-	return Config{
-		DataDir:     dataDir,
-		ThumbsDir:   filepath.Join(dataDir, "thumbs"),
-		DBPath:      filepath.Join(dataDir, "allium.db"),
+	
+	exeDir:=filepath.Dir(exePath)
+	umbelaDirectory := filepath.Join(exeDir, ".umbela")
+
+	return exeDir, umbelaDirectory, nil 
+}
+
+// DefaultConfig returns the configuration with the user home paths.
+func DefaultConfig() (*Config, error) {
+	_,umbelaDirectory, err :=GetExecutableAndUmbelaPath()
+
+	if err!=nil{
+		return nil, err
+	}
+
+	return &Config{
+		DataDir:     umbelaDirectory,
+		ThumbsDir:   filepath.Join(umbelaDirectory, "thumbs"),
+		DBPath:      filepath.Join(umbelaDirectory, "umbela.db"),
 		APIPort:     41110,
 		TorEnabled:  false,
 		OneHopTor: 	 true,
 		ThumbWidth:  400,
 		ThumbHeight: 0,
 		WorkerCount: 4,
-	}
+	}, nil
 }
+

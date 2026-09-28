@@ -7,12 +7,12 @@ import (
 
 func TestGenerateThumbnail(t *testing.T) {
     p := &Processor{
-        thumbsDir:  "/home/user/Allium/allium-server/tests/test_thumbs",
+        thumbsDir:  "/home/user/umbela/umbela-server/tests/test_thumbs",
         thumbWidth: 200,
     }
 
-    filePath:= "/home/user/Allium/allium-server/tests/foto3.jpg"
-    jsonFilePath:= "/home/user/Allium/allium-server/tests/PXL_20240301_175526140.jpg.supplemental-metada.json"
+    filePath:= "/home/user/umbela/umbela-server/tests/foto3.jpg"
+    jsonFilePath:= "/home/user/umbela/umbela-server/tests/PXL_20240301_175526140.jpg.supplemental-metada.json"
     processResult, err := p.GenerateThumbnailAndBlurHash(filePath, "hash123")
 
     if err != nil{

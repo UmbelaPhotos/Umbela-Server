@@ -7,7 +7,7 @@ import (
 )
 
 func TestConnectToTOR(t *testing.T) {
-	torController, err:=NewController("/home/user/Allium/allium-server/tests/torController", 5173)
+	torController, err:=NewController("/home/user/umbela/umbela-server/tests/torController", 5173)
 	if err != nil {
 		fmt.Println("Sorry bob")
 	}
