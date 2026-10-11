@@ -104,7 +104,7 @@ The server embeds and manages a Tor daemon at the system level. Every instance a
 
 ```
 ┌──────────────┐        Tor network        ┌───────────────────────────────┐
-│   Your       │ ───────────────────────▶  │  Umbela                       │
+│   Your       │ ───────────────────────▶ │  Umbela                       │
 │   client     │   (.onion v3, E2E enc.)   │  ┌─────────┐   ┌────────────┐ │
 └──────────────┘                           │  │ Embedded│   │ Encrypted  │ │
                                            │  │   Tor   │──▶│ Vault + DB │ │
@@ -235,8 +235,8 @@ Main commands:
                               generates the Ed25519 network keys and creates
                               the encrypted database.
   add <username> <path>       Imports images or a Google Takeout ZIP into the Vault.
-  <username> pair             Pairs a phone with the server.
-  <username> start            Unlocks the Vault in RAM, starts the Tor controller
+  pair <username>             Pairs a phone with the server.
+  start <username>            Unlocks the Vault in RAM, starts the Tor controller
                               and exposes the server API.
 ```
 
