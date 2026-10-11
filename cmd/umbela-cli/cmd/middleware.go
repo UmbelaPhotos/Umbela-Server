@@ -36,7 +36,7 @@ func Chain(finalFunc CommandRun, middlewares ...Middleware) CommandRun {
 func RequireAuth(next CommandRun) CommandRun {
 	return func(cmd *cobra.Command, args []string) error {
 		username := args[0]
-		passwordBytes, err := ReadPasswordClean() // Aquí usarías term.ReadPassword()
+		passwordBytes, err := ReadPasswordClean() 
 
 		if err != nil {
 			return err

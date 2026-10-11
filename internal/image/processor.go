@@ -82,9 +82,17 @@ func (p *Processor) Shutdown() {
 	vips.Shutdown()
 }
 
-func (p *Processor) SaveImage(imageBytes []byte, filePath string){
-	// TODO: encryptedBytes, err := crypto.EncryptGCM()
-	return 
+func (p *Processor) SaveImage(imageBytes []byte, filePath string, masterKey []byte) error {
+	encryptedBytes, err := crypto.EncryptGCM(imageBytes, masterKey)
+	if err!=nil{
+		return err
+	}
+
+	err = os.WriteFile(filePath, encryptedBytes, 0644)
+	if err!=nil{
+		return fmt.Errorf("writing file: %w", err)
+	}
+	return nil
 }
 
 // GenerateThumbnail creates the thumbnail of theimage in the srcPath,

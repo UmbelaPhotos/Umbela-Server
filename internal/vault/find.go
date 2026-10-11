@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"umbela-server/internal/config"
 	"umbela-server/internal/crypto"
-	"umbela-server/internal/models"
 )
 
 func FindUserFolder(username string) (string, []byte, error) {
-	_, umbelaDir, err := models.GetExecutableAndUmbelaPath()
+	_, umbelaDir, err := config.GetExecutableAndUmbelaPath()
 
 	if err != nil {
 		return "", nil, err
@@ -27,7 +27,7 @@ func FindUserFolder(username string) (string, []byte, error) {
 		}
 
 		folderHashedName := entry.Name()
-		configPath := filepath.Join(umbelaDir, folderHashedName, "config.enc")
+		configPath := filepath.Join(umbelaDir, folderHashedName, "config.bin")
 
 		file, err := os.Open(configPath)
 		if err != nil {
