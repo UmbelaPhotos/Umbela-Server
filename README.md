@@ -70,7 +70,7 @@ umbela add alice ~/Downloads/takeout-20260101.zip
 ### 3. Pair your phone
 
 ```bash
-umbela <username> pair
+umbela pair <username>
 ```
 
 Pairs your phone with your Umbela server.
@@ -78,7 +78,7 @@ Pairs your phone with your Umbela server.
 ### 4. Start the server
 
 ```bash
-umbela <username> start
+umbela start <username> 
 ```
 
 Unlocks the Vault in RAM, starts the embedded Tor daemon and brings your private `.onion` service online.
