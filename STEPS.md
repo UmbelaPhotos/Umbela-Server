@@ -58,7 +58,7 @@ Así fluirá el código para cada comando dentro de cmd/umbela-node/cmd/:
 │   │   └── 📄 session.go     # SessionManager: mapea SessionToken -> UserHash + MasterKeyRef
 │   │
 │   ├── 📁 vault/             # Gestión de la Bóveda en Disco (Identidad/Configuración)
-│   │   ├── 📄 manager.go     # Lee/Escribe el .salt y el .config.enc
+│   │   ├── 📄 manager.go     # Lee/Escribe el .salt y el .config.bin
 │   │   └── 📄 setup.go       # Lógica para crear una bóveda nueva por primera vez
 │   │
 │   ├── 📁 crypto/            # Primitivas criptográficas (Lo que ya tienes)

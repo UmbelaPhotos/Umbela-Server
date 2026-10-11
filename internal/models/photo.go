@@ -10,19 +10,19 @@ type Photo struct {
 	bun.BaseModel `bun:"table:photos,alias:p"`
 
 	ID          string    `bun:"id,pk,type:text"`
-	Hash        string    `bun:"hash,unique,not null"` // Para deduplicación
+	Hash        string    `bun:"hash,unique,notnull"` // Para deduplicación
 	Title       string    `bun:"title"`
 	Description string    `bun:"description"`
 	Artist      string    `bun:"artist"`
-	CapturedAt  int64     `bun:"captured_at,index"` // Unix timestamp para velocidad
+	CapturedAt  int64     `bun:"captured_at,unique"` // Unix timestamp para velocidad
 	Latitude    float64   `bun:"latitude"`
 	Longitude   float64   `bun:"longitude"`
-	FilePath    string    `bun:"file_path,not null"`
+	FilePath    string    `bun:"file_path,notnull"`
 	ThumbPath   string    `bun:"thumb_path"`
 	Blurhash    string    `bun:"blurhash"`
 	CreatedAt   time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 
-	Faces []Face `bun:"m2m:photo_faces,join:Photo=Face"`
+	Faces []*Face `bun:"m2m:photo_faces,join:Photo=Face"`
 }
 
 type Face struct {
@@ -32,14 +32,14 @@ type Face struct {
 	PersonName string `bun:"person_name"`
 	Embedding  []byte `bun:"embedding,notnull"`
 
-	Photos []Photo `bun:"m2m:photo_faces,join:Face=Photo"`
+	Photos []*Photo `bun:"m2m:photo_faces,join:Face=Photo"`
 }
 
 type PhotoFace struct {
 	bun.BaseModel `bun:"table:photo_faces,alias:pf"`
 
-	PhotoID		string `bun:"photo_id,pk,type:text`
-	FaceID		string `bun:"face_id,pk,type:text`
+	PhotoID		string `bun:"photo_id,pk,type:text"`
+	FaceID		string `bun:"face_id,pk,type:text"`
 
 	Photo		*Photo `bun:"rel:belongs-to,join:photo_id=id"`
 	Face		*Face  `bun:"rel:belongs-to,join:face_id=id"`
@@ -47,7 +47,7 @@ type PhotoFace struct {
 	BBoxMinX	float64	`bun:"bbox_min_x,notnull"`
 	BBoxMinY	float64	`bun:"bbox_min_y,notnull"`
 	BBoxMaxX	float64	`bun:"bbox_max_x,notnull"`
-	BBoxMaxY	float64	`bun:"bbox_min_y,notnull"`
+	BBoxMaxY	float64	`bun:"bbox_max_y,notnull"`
 
 	Confidence 	float64	`bun:"confidence"`
 }

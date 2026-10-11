@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-func EncryptGCM(key []byte, dataBytes []byte) ([]byte, error){
+func EncryptGCM(dataBytes []byte, key []byte) ([]byte, error){
 	block, err:=aes.NewCipher(key)
 	if err!=nil{
 		return nil, fmt.Errorf("new cipher: %w", err)
@@ -30,7 +30,7 @@ func EncryptGCM(key []byte, dataBytes []byte) ([]byte, error){
 	return cipherBytes, nil
 }
 
-func DecryptGCM(key []byte, encriptedBytes []byte) ([]byte, error){
+func DecryptGCM(encriptedBytes []byte, key []byte) ([]byte, error){
 	block, err:=aes.NewCipher(key)
 	if err!=nil{
 		return nil,fmt.Errorf("new cipher: %w", err)
@@ -43,6 +43,10 @@ func DecryptGCM(key []byte, encriptedBytes []byte) ([]byte, error){
 
 	// Get nonce
 	nonceSize:=gcm.NonceSize()
+	if len(encriptedBytes) < nonceSize+gcm.Overhead() {
+		return nil, fmt.Errorf("encrypted data is too short or corrupted")
+	}
+
 	nonce, actualCipherData := encriptedBytes[:nonceSize], encriptedBytes[nonceSize:]
 
 	dataBytes, err := gcm.Open(nil, nonce, actualCipherData, nil)
