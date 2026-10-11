@@ -63,3 +63,5 @@ profile/
 data/
 umbela-data/
 .umbela/
+
+tests/
