@@ -1,22 +1,13 @@
-// Package image provee las funciones de procesamiento de imágenes de umbela.
-// Utiliza govips (binding de libvips) para operaciones de alta performance
-// como generación de thumbnails y conversión a WebP.
-//
-// PREREQUISITO: libvips debe estar instalado en el sistema.
-//
-//	Ubuntu/Debian: apt-get install libvips-dev
-//	macOS:         brew install vips
 package image
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 	"umbela-server/internal/crypto"
 
@@ -24,7 +15,7 @@ import (
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/rwcarlsen/goexif/exif"
 	"golang.org/x/image/webp"
-)
+) 
 
 // ProcessResult has the result of processing an image.
 type ProcessResult struct {
@@ -36,7 +27,6 @@ type ProcessResult struct {
 
 // The processor saves the configuration of Govips, so it only starts once.
 type Processor struct {
-	copyPath 	string
 	thumbsDir   string // Thumbnails dir
 	thumbWidth  int    // Target width in pixels
 	thumbHeight int    // Target height (0 = proportional to width)
@@ -64,17 +54,19 @@ type GoogleMetadata struct {
 	} `json:"geoData"`
 }
 
-// NewProcessor creates a new Processor and creates the Govips runtime.
-// Called once at the start
-// Input:  thumbsDir string, thumbWidth int, thumbHeight int
-// Output: *Processor ready, or an error if there was an issue with govips
-func NewProcessor(thumbsDir string, thumbWidth, thumbHeight int) (*Processor, error) {
+// NewProcessor initializes Govips and prepares directories
+func NewProcessor(thumbsDir string, thumbWidth int, thumbHeight int) (*Processor, error) {
 	err:= vips.Startup(nil)
+	vips.LoggingSettings(nil, vips.LogLevelError)
 	if err!= nil{
 		return nil, fmt.Errorf("starting new process of govips %w", err)
 	}
-	os.MkdirAll(thumbsDir, 0755)
-	return &Processor{thumbsDir: thumbsDir, thumbWidth: thumbWidth, thumbHeight: thumbHeight}, nil
+	os.MkdirAll(thumbsDir, 0700)
+	return &Processor{
+		thumbsDir: thumbsDir, 
+		thumbWidth: thumbWidth, 
+		thumbHeight: thumbHeight,
+		}, nil
 }
 
 // Shutdown cleans the resources of govips. Use with defer after initializing.
@@ -82,63 +74,51 @@ func (p *Processor) Shutdown() {
 	vips.Shutdown()
 }
 
-func (p *Processor) SaveImage(imageBytes []byte, filePath string, masterKey []byte) error {
+func (p *Processor) SaveImage(filePath string, imageBytes []byte,  masterKey []byte) error {
 	encryptedBytes, err := crypto.EncryptGCM(imageBytes, masterKey)
 	if err!=nil{
-		return err
+		return fmt.Errorf("encrypting image: %w", err)
 	}
 
-	err = os.WriteFile(filePath, encryptedBytes, 0644)
+	err = os.WriteFile(filePath, encryptedBytes, 0600)
 	if err!=nil{
 		return fmt.Errorf("writing file: %w", err)
 	}
 	return nil
 }
 
-// GenerateThumbnail creates the thumbnail of theimage in the srcPath,
-// It saves it in thumbsDir/<hash>.webp and returns ProcessResult.
-// Input:  srcPath string — og image
-//  	   hash string    — hash SHA256 of the file (used as name of the thumbnail)
-//
-// Output: ProcessResult with ThumbPath and dimensions, or an error
-func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string) (*ProcessResult, error) {
-	thumbPath := filepath.Join(p.thumbsDir, hash+".webp")
-	vipsImage, err := vips.NewImageFromFile(srcPath)
+func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string, masterKey []byte) (*ProcessResult, error) {
+	thumbPath := filepath.Join(p.thumbsDir, hash+".umb")
 
+	vipsImage, err := vips.NewImageFromFile(srcPath)
 	if err != nil {
 		return nil, fmt.Errorf("opening image with govips: %w", err)
 	}
 	defer vipsImage.Close()
+	
+	_ = vipsImage.AutoRotate()
 
 	// original dimensions
 	originalWidth := vipsImage.Width()
 	originalHeight := vipsImage.Height()
 
+	imageBlurhash, err:=GenerateBlurhash(vipsImage, originalWidth)
+
 	// Reducing the image with Lanczos3 algorithm
 	scale := float64(p.thumbWidth) / float64(originalWidth)
-	err = vipsImage.Resize(scale, vips.KernelLanczos3)
-	if err != nil {
-		return nil, fmt.Errorf("scailing image: %w", err)
+	if err := vipsImage.Resize(scale, vips.KernelLanczos3); err != nil {
+		return nil, fmt.Errorf("scaling thumbnail: %w", err)
 	}
 
-	// export to webp
-	webpBytes, _, err := vipsImage.ExportWebp(vips.NewWebpExportParams())
+	ep := vips.NewWebpExportParams()
+	ep.Quality = 80
+	webpBytes, _, err := vipsImage.ExportWebp(ep)
 	if err != nil {
-		return nil, fmt.Errorf("exporting to webp: %w", err)
+		return nil, fmt.Errorf("exporting webp: %w", err)
 	}
 
-	goImg, err := webp.Decode(bytes.NewReader(webpBytes))
-	if err != nil {
-		return nil, fmt.Errorf("decoding webp: %w", err)
-	}
-
-	// Blurhash
-	imageBlurhash, err := blurhash.Encode(4, 3, goImg)
-	
-	// save webp image
-	err = os.WriteFile(thumbPath, webpBytes, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("writing files on disk: %w", err)
+	if err:= p.SaveImage(thumbPath, webpBytes, masterKey); err!=nil{
+		return nil, fmt.Errorf("saving encrypted thumbnail: %w", err)
 	}
 
 	return &ProcessResult{
@@ -149,23 +129,35 @@ func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string) (*Process
 	}, nil
 }
 
-// Make the SHA256 hash of the file 
-// Input:  filePath string — ruta al archivo a hashear
-// Output: string hexadecimal del hash (64 caracteres), o error de I/O
-func ComputeSHA256(filePath string) (string, error) {
-	openedFile, err := os.Open(filePath)
+func GenerateBlurhash(vipsImage *vips.ImageRef, originalWidth int) (string, error) {
+	blurImg, err := vipsImage.Copy()
 	if err != nil {
-		return "", fmt.Errorf("opening file %w", err)
+		return "", fmt.Errorf("copying vips image for blurhash: %w", err)
 	}
-	defer openedFile.Close()
+	defer blurImg.Close() // Se libera en CGO inmediatamente al salir de la función
 
-	hasher := sha256.New()
-	_, err = io.Copy(hasher, openedFile)
-	if err != nil {
-		return "", fmt.Errorf("Error hashing the file: %w", err)
+	blurScale := 32.0 / float64(originalWidth)
+	if err := blurImg.Resize(blurScale, vips.KernelNearest); err != nil {
+		return "", fmt.Errorf("resizing image for blurhash: %w", err)
 	}
-	hashString := fmt.Sprintf("%x", hasher.Sum(nil))
-	return hashString, nil
+
+	ep := vips.NewWebpExportParams()
+	blurWebpBytes, _, err := blurImg.ExportWebp(ep)
+	if err != nil {
+		return "", fmt.Errorf("exporting webp buffer for blurhash: %w", err)
+	}
+
+	goImg, err := webp.Decode(bytes.NewReader(blurWebpBytes))
+	if err != nil {
+		return "", fmt.Errorf("decoding webp buffer for blurhash: %w", err)
+	}
+
+	bh, err := blurhash.Encode(4, 3, goImg)
+	if err != nil {
+		return "", fmt.Errorf("encoding blurhash: %w", err)
+	}
+
+	return bh, nil 
 }
 
 func ExtractEXIF(srcPath string) (*EXIFData, error) {
@@ -175,41 +167,51 @@ func ExtractEXIF(srcPath string) (*EXIFData, error) {
 	}
 	defer f.Close()
 
-	imageMetadata := &EXIFData{}
+	imageMetadata := &EXIFData{
+		Title: filepath.Base(srcPath),
+	}
 
 	x, err := exif.Decode(f)
 	if err != nil {
 		if exif.IsCriticalError(err) {
-			if filepath.Ext(srcPath) == ".HEIC" {
-				fmt.Println("Can't get metadata from HEIC images at the moment")
-				return imageMetadata, nil
+			ext := strings.ToLower(filepath.Ext(srcPath))
+			if ext == ".heic" {
+				fmt.Println("Info: HEIC metadata extraction not supported yet")
+			} else {
+				fmt.Printf("Warning: Could not decode EXIF for %s: %v\n", srcPath, err)
 			}
-			fmt.Printf("Warning: Could not decode EXIF for %s: %v\n", srcPath, err)
-			return imageMetadata, nil
 		}
+		if info, statErr := f.Stat(); statErr == nil {
+			imageMetadata.CapturedAt = info.ModTime().Unix()
+		} else {
+			imageMetadata.CapturedAt = time.Now().Unix()
+		}
+		return imageMetadata, nil
 	}
 
-	lat, lon, _ := x.LatLong()
-	capturedAt, _ := x.DateTime()
-	description, _ := x.Get(exif.ImageDescription)
-	artist, _ := x.Get(exif.Artist)
+	if lat, lon, err := x.LatLong(); err == nil {
+		imageMetadata.Latitude = lat
+		imageMetadata.Longitude = lon
+	}
 
-	imageMetadata.Latitude = lat
-	imageMetadata.Longitude = lon
-	imageMetadata.Title = filepath.Base(srcPath)
+	if capturedAt, err := x.DateTime(); err == nil && !capturedAt.IsZero() {
+		imageMetadata.CapturedAt = capturedAt.Unix()
+	} else if info, err := f.Stat(); err == nil {
+		imageMetadata.CapturedAt = info.ModTime().Unix()
+	} else {
+		imageMetadata.CapturedAt = time.Now().Unix()
+	}
 
-	if description != nil {
-		if val, err := description.StringVal(); err == nil {
+	if descTag, err := x.Get(exif.ImageDescription); err == nil {
+		if val, err := descTag.StringVal(); err == nil {
 			imageMetadata.Description = val
 		}
 	}
-	if artist != nil {
-		if val, err := artist.StringVal(); err == nil {
+
+	if artistTag, err := x.Get(exif.Artist); err == nil {
+		if val, err := artistTag.StringVal(); err == nil {
 			imageMetadata.Artist = val
 		}
-	}
-	if !capturedAt.IsZero() {
-		imageMetadata.CapturedAt = capturedAt.Unix()
 	}
 
 	return imageMetadata, nil

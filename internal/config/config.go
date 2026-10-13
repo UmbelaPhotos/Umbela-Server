@@ -1,13 +1,17 @@
 package config
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
 )
 
 type Config struct {
-	DataDir   string `json:"data_dir"`
+	DataDir	  string `json:"data_dir"`
+	ImageDir  string `json:"image_dir"`
 	ThumbsDir string `json:"thumbs_dir"`
 	DBPath    string `json:"db_path"`
+	ZipDepth  int	 `json:"zip_depth"`
 
 	APIPort    int    `json:"api_port"`
 	TorEnabled bool   `json:"tor_enabled"`
@@ -20,17 +24,22 @@ type Config struct {
 }
 
 // DefaultConfig returns the configuration with the user home paths.
-func DefaultConfig() (*Config, error) {
-	_, umbelaDirectory, err := GetExecutableAndUmbelaPath()
+func DefaultConfig(userPath string) (*Config, error) {
+	if err := os.MkdirAll(userPath, 0700); err != nil {
+		return nil, fmt.Errorf("creating user dir: %w", err)
+	}
 
-	if err != nil {
-		return nil, err
+	info, err := os.Stat(userPath)
+	if err != nil || !info.IsDir() {
+		return nil, fmt.Errorf("path: %s exists but is not valid", userPath)
 	}
 
 	return &Config{
-		DataDir:     umbelaDirectory,
-		ThumbsDir:   filepath.Join(umbelaDirectory, "thumbs"),
-		DBPath:      filepath.Join(umbelaDirectory, "umbela.db"),
+		DataDir:	 userPath,
+		ImageDir:    filepath.Join(userPath, "images"),
+		ThumbsDir:   filepath.Join(userPath, "thumbs"),
+		DBPath:      filepath.Join(userPath, "umbela.db"),
+		ZipDepth: 	 3,
 		APIPort:     41110,
 		TorEnabled:  true,
 		OneHopTor:   true,
