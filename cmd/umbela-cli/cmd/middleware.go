@@ -19,6 +19,7 @@ type contextKey string
 const (
 	CtxKeyMasterKey contextKey = "masterKey"
 	CtxKeyVaultPath contextKey = "vaultPath"
+	CtxKeySalt		contextKey = "salt"
 )
 
 type CommandRun func(cmd *cobra.Command, args []string) error
@@ -54,7 +55,7 @@ func RequireAuth(next CommandRun) CommandRun {
 
 		// Check password
 		err = db.TestUnlock(dbPath, masterKey)
-		if errors.Is(db.ErrInvalidDatabasePassword, err) {
+		if errors.Is(err, db.ErrInvalidDatabasePassword) {
 			return ErrUserOrPasswordIncorrect
 		} else if err!=nil{
 			return err
@@ -64,6 +65,7 @@ func RequireAuth(next CommandRun) CommandRun {
 		ctx := cmd.Context()
 		ctx = context.WithValue(ctx, CtxKeyMasterKey, masterKey)
 		ctx = context.WithValue(ctx, CtxKeyVaultPath, userFolder)
+		ctx = context.WithValue(ctx, CtxKeySalt, userSalt)
 
 		cmd.SetContext(ctx)
 
@@ -85,11 +87,16 @@ func RequireUsername(username string) (string, error) {
 func ReadPasswordClean() ([]byte, error) {
 	fd := int(os.Stdin.Fd())
 
+	if !term.IsTerminal(fd) {
+		return nil, fmt.Errorf("input is not a terminal TTY")
+	}
+
+	fmt.Print("Enter password: ")
+
 	passwordBytes, err := term.ReadPassword(fd)
 	if err != nil {
 		return nil, fmt.Errorf("reading password: %w", err)
 	}
-
 	fmt.Println()
 
 	return passwordBytes, nil
@@ -105,4 +112,33 @@ func RequireServerNotRunning(next CommandRun) CommandRun {
 
 		return next(cmd, args)
 	}
+}
+
+type ContextSecrets struct {
+	MasterKey []byte
+	VaultPath string
+	Salt      []byte
+}
+
+func GetContextSecrets(ctx context.Context) (ContextSecrets, error) {
+	masterKey, ok := ctx.Value(CtxKeyMasterKey).([]byte)
+	if !ok || len(masterKey) == 0 {
+		return ContextSecrets{}, fmt.Errorf("master key no encontrada en el contexto")
+	}
+
+	vaultPath, ok := ctx.Value(CtxKeyVaultPath).(string)
+	if !ok || vaultPath == "" {
+		return ContextSecrets{}, fmt.Errorf("vault path no encontrado en el contexto")
+	}
+
+	salt, ok := ctx.Value(CtxKeySalt).([]byte)
+	if !ok || len(salt) == 0 {
+		return ContextSecrets{}, fmt.Errorf("salt no encontrado en el contexto")
+	}
+
+	return ContextSecrets{
+		MasterKey: masterKey,
+		VaultPath: vaultPath,
+		Salt:      salt,
+	}, nil
 }

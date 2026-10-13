@@ -14,7 +14,7 @@ type Photo struct {
 	Title       string    `bun:"title"`
 	Description string    `bun:"description"`
 	Artist      string    `bun:"artist"`
-	CapturedAt  int64     `bun:"captured_at,unique"` // Unix timestamp para velocidad
+	CapturedAt  int64     `bun:"captured_at"`
 	Latitude    float64   `bun:"latitude"`
 	Longitude   float64   `bun:"longitude"`
 	FilePath    string    `bun:"file_path,notnull"`

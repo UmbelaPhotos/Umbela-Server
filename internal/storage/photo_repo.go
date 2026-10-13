@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"uuid"
 
 	"umbela-server/internal/models"
 
@@ -33,7 +34,15 @@ func NewPhotoRepository(db *bun.DB) *PhotoRepository {
 // Input:  ctx context.Context, photo *models.Photo with all required fields
 // Output: error if the insert fails for another unexpected reason
 func (r *PhotoRepository) Save(ctx context.Context, photo *models.Photo) error {
-	_, err := r.db.NewInsert().Model(photo).On("CONFLICT (hash) DO NOTHING").Exec(ctx)
+	if photo.ID == "" {
+        id := uuid.NewV7()
+        photo.ID = id.String()
+    }
+	_, err := r.db.NewInsert().
+		Model(photo).
+		Returning(""). 
+		On("CONFLICT (hash) DO NOTHING").
+		Exec(ctx)
 	return err
 }
 
@@ -73,7 +82,7 @@ func (r *PhotoRepository) GetByHash(ctx context.Context, hash string) (*models.P
 //
 // Input:  ctx, limit int (Photos per page), offset int (skip)
 // Output: slice de fotos, total of photos in the BD, error
-func (r *PhotoRepository) ListPaginated(ctx context.Context, limit int, offset int) ([]*models.Photo, int, error) {
+func (r *PhotoRepository) ListPaginated(ctx context.Context, limit int64, offset int64) ([]*models.Photo, int64, error) {
 	photos := []*models.Photo{}
 	total, err := r.db.NewSelect().Model(&photos).OrderExpr("captured_at DESC").Limit(limit).Offset(offset).ScanAndCount(ctx)
 	if err != nil {

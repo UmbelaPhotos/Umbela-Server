@@ -53,8 +53,12 @@ func CreateProfile(cmd *cobra.Command, args []string) error{
 
 	userVault:=vault.NewVault(userPath, masterKey, salt)
 
-	userVault.SetUp()
+	userVault.SetUp(userPath)
 
 	crypto.CleanBytes(passwordBytes, confirmPasswordBytes)
 	return nil
+}
+
+func init() {
+	rootCmd.AddCommand(createCmd)
 }

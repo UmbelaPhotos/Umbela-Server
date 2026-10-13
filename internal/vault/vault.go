@@ -31,7 +31,7 @@ func NewVault(path string, masterKey []byte, salt []byte) *Vault {
 	}
 }
 
-func (v *Vault) SetUp() error{
+func (v *Vault) SetUp(userPath string) error{
 	// Make directories
 	err:=v.CreateDirs()
 	if err!=nil{
@@ -39,7 +39,7 @@ func (v *Vault) SetUp() error{
 	}
 
 	//  Config
-	v.Config,err =config.DefaultConfig()
+	v.Config,err =config.DefaultConfig(userPath)
 	if err!=nil{
 		return err
 	}
@@ -74,7 +74,7 @@ func (v *Vault) CreateDirs() error{
 	if err!=nil{
 		return fmt.Errorf("creating user dir: %w", err)
 	}
-
+	
 	photosPath := filepath.Join(v.Path,"images")
 	err=os.MkdirAll(photosPath, 0700)
 	if err != nil{
