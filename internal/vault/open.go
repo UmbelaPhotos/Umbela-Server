@@ -5,8 +5,8 @@ import (
 )
 
 
-func (v *Vault) Open() error {
-	err := v.ReadConfigFile()
+func (v *Vault) Open(masterKey []byte) error {
+	err := v.Config.ReadConfigFile(masterKey)
 	if err != nil{
 		return err
 	}

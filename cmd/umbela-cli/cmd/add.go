@@ -31,10 +31,13 @@ func AddImages(cmd *cobra.Command, args []string) error {
 	if err!=nil{
 		return fmt.Errorf("converting to absolute path: %w\n", err)
 	}
-	fmt.Printf("Processing images in path: %v\n", addImagesPath)
+	fmt.Printf("processing images in path: %v\n", addImagesPath)
 
 	userVault:=vault.NewVault(userSecrets.VaultPath, userSecrets.MasterKey, userSecrets.Salt)
-	userVault.ReadConfigFile()
+	err=userVault.Config.ReadConfigFile(userSecrets.MasterKey)
+	if err!=nil{
+		return err
+	}
 
 	tempDir:=filepath.Join(userVault.Path,"tmp")
 	err=os.MkdirAll(tempDir,0700)

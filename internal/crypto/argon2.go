@@ -5,8 +5,7 @@ import (
 )
 
 func DeriveMasterKey(passwordBytes []byte, salt []byte) []byte{
-	// OWASP/RFC 9106 recommended
-	var time uint32 = 1
+	var time uint32 = 3
 	var memory uint32 = 64*1024
 	var threads uint8 = 4
 	var keyLen uint32 =32
