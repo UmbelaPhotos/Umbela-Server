@@ -37,7 +37,7 @@ func Chain(finalFunc CommandRun, middlewares ...Middleware) CommandRun {
 func RequireAuth(next CommandRun) CommandRun {
 	return func(cmd *cobra.Command, args []string) error {
 		username := args[0]
-		passwordBytes, err := ReadPasswordClean() 
+		passwordBytes, err := ReadPasswordClean("Enter your password: ") 
 
 		if err != nil {
 			return err
@@ -84,14 +84,14 @@ func RequireUsername(username string) (string, error) {
 	return userVault, nil
 }
 
-func ReadPasswordClean() ([]byte, error) {
+func ReadPasswordClean(textPrompt string) ([]byte, error) {
 	fd := int(os.Stdin.Fd())
 
 	if !term.IsTerminal(fd) {
 		return nil, fmt.Errorf("input is not a terminal TTY")
 	}
 
-	fmt.Print("Enter password: ")
+	fmt.Print(textPrompt)
 
 	passwordBytes, err := term.ReadPassword(fd)
 	if err != nil {

@@ -7,11 +7,11 @@ import (
 )
 
 type Config struct {
-	DataDir	  string `json:"data_dir"`
+	UserDir   string `json:"data_dir"`
 	ImageDir  string `json:"image_dir"`
 	ThumbsDir string `json:"thumbs_dir"`
 	DBPath    string `json:"db_path"`
-	ZipDepth  int	 `json:"zip_depth"`
+	ZipDepth  int    `json:"zip_depth"`
 
 	APIPort    int    `json:"api_port"`
 	TorEnabled bool   `json:"tor_enabled"`
@@ -35,11 +35,11 @@ func DefaultConfig(userPath string) (*Config, error) {
 	}
 
 	return &Config{
-		DataDir:	 userPath,
+		UserDir:     userPath,
 		ImageDir:    filepath.Join(userPath, "images"),
 		ThumbsDir:   filepath.Join(userPath, "thumbs"),
 		DBPath:      filepath.Join(userPath, "umbela.db"),
-		ZipDepth: 	 3,
+		ZipDepth:    3,
 		APIPort:     41110,
 		TorEnabled:  true,
 		OneHopTor:   true,

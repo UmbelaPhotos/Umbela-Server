@@ -24,14 +24,12 @@ func CreateProfile(cmd *cobra.Command, args []string) error{
 	fmt.Scanln(&username)
 
 	
-	fmt.Print("Create a password: ")
-	passwordBytes, err := ReadPasswordClean()
+	passwordBytes, err := ReadPasswordClean("Create a password:")
 	if err!=nil{
 		return fmt.Errorf("Couldn't read password")
 	}
 
-	fmt.Print("Confirm password: ")
-	confirmPasswordBytes, err := ReadPasswordClean()
+	confirmPasswordBytes, err := ReadPasswordClean("Confirm password: ")
 	if err!=nil{
 		return fmt.Errorf("Couldn't read the confirmation")
 	}
