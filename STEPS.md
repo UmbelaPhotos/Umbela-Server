@@ -1,19 +1,19 @@
 # ¿Cómo funcionan los Comandos CLI con esta estructura?
 
 Así fluirá el código para cada comando dentro de cmd/umbela-node/cmd/:
-**Por cada comando que pida contraseña, la masterkey se guardara en ram para evitar preguntar una y otra vez la contraseña en cada comando**
+**Por cada comando que pida contraseña, la KEK se guardara en ram para evitar preguntar una y otra vez la contraseña en cada comando**
 
 ## A. umbela-server create (create.go)
 - Pide una contraseña nueva al usuario por terminal.
 - Llama a crypto.GenerateSalt().
-- Llama a crypto.DeriveMasterKey(password, salt).
-- Llama a vault.CreateVault(salt, config, masterKey) para crear los archivos hermanos.
+- Llama a crypto.DeriveKEK(password, salt).
+- Llama a vault.CreateVault(salt, config, KEK) para crear los archivos hermanos.
 - Llama a db.InitSQLCipher(...) para generar el .db vacío y correr migraciones.
 - Llama a tor.GenerateHiddenService() [One hop] para crear el .onion inicial.
 
 ## B. umbela-server <user> start (start.go)
 (Inicia el servidor completo para atender a la app móvil)
-- Llama a db.InitSQLCipher(...) con la MasterKey.
+- Llama a db.InitSQLCipher(...) con la KEK.
 - Inicia Govips y levanta el procesador image.NewProcessor().
 - Levanta api.NewServer(...) (gRPC) y tor.Start().
 - Se queda ejecutando (Daemon) esperando conexiones de Tor.
@@ -22,7 +22,7 @@ Así fluirá el código para cada comando dentro de cmd/umbela-node/cmd/:
 (Proceso batch local sin levantar la red)
 - Abre db.InitSQLCipher.
 - Levanta GoVips image.NewProcessor().
-- Llama a pipeline.IngestDirectory(ruta, masterKey, db, processor).
+- Llama a pipeline.IngestDirectory(ruta, KEK, db, processor).
 - Termina y se cierra. (No levanta Tor ni gRPC).
 
 ## D. umbela-server <user> pair (pair.go)
@@ -54,8 +54,8 @@ Así fluirá el código para cada comando dentro de cmd/umbela-node/cmd/:
 │   │   └── 📁 interceptors/  # Middleware: auth_interceptor.go (valida tokens gRPC)
 │   │
 │   ├── 📁 auth/              # Gestión de Sesiones y RAM (El corazón Zero-Knowledge)
-│   │   ├── 📄 key_agent.go   # Mantiene MasterKey en RAM, TTL de 15 min, memzero
-│   │   └── 📄 session.go     # SessionManager: mapea SessionToken -> UserHash + MasterKeyRef
+│   │   ├── 📄 key_agent.go   # Mantiene KEK en RAM, TTL de 15 min, memzero
+│   │   └── 📄 session.go     # SessionManager: mapea SessionToken -> UserHash + KEKRef
 │   │
 │   ├── 📁 vault/             # Gestión de la Bóveda en Disco (Identidad/Configuración)
 │   │   ├── 📄 manager.go     # Lee/Escribe el .salt y el .config.bin

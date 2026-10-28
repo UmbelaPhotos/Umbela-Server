@@ -3,6 +3,7 @@ module umbela-server
 go 1.27.2
 
 require (
+	connectrpc.com/connect/v2 v2.0.2
 	github.com/buckket/go-blurhash v1.1.0
 	github.com/cretz/bine v0.2.0
 	github.com/davidbyttow/govips/v2 v2.19.0
@@ -14,6 +15,7 @@ require (
 	golang.org/x/crypto v0.58.0
 	golang.org/x/image v0.47.0
 	golang.org/x/term v0.47.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (

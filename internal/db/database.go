@@ -24,15 +24,15 @@ import (
 //
 // Input:  dbPath string — path to the .db file (example: "./data/umbela.db")
 // Output: *bun.DB ready to use, or error.
-func InitDB(baseDir string, masterkey []byte) (*bun.DB, error) {
+func InitDB(baseDir string, DEK []byte) (*bun.DB, error) {
 	// Make sure the dir exists
-	dbPath:=filepath.Join(baseDir, "database.db")
+	dbPath := filepath.Join(baseDir, "database.db")
 	dir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, fmt.Errorf("creating directory: %w", err)
 	}
 
-	hexKey := hex.EncodeToString(masterkey)
+	hexKey := hex.EncodeToString(DEK)
 
 	values := url.Values{}
 	values.Add("_journal_mode", "WAL")
@@ -41,7 +41,7 @@ func InitDB(baseDir string, masterkey []byte) (*bun.DB, error) {
 
 	// SQLCipher
 	values.Add("_pragma_key", fmt.Sprintf("x'%s'", hexKey))
-	values.Add("_pragma_cipher_page_size", "4096") 
+	values.Add("_pragma_cipher_page_size", "4096")
 
 	dsn := fmt.Sprintf("%s?%s", dbPath, values.Encode())
 
@@ -73,7 +73,6 @@ func InitDB(baseDir string, masterkey []byte) (*bun.DB, error) {
 	// Register m2m models
 	db.RegisterModel((*models.AlbumPhoto)(nil))
 	db.RegisterModel((*models.PhotoFace)(nil))
-
 
 	if err := runMigrations(db); err != nil {
 		return nil, fmt.Errorf("error en migraciones: %w", err)

@@ -2,7 +2,6 @@ package vault
 
 import (
 	"fmt"
-	"os"
 	"umbela-server/internal/config"
 	"umbela-server/internal/db"
 	"umbela-server/internal/image"
@@ -12,59 +11,34 @@ import (
 )
 
 type Vault struct {
-	Config        *config.Config
-	Path          string
-	DB            *bun.DB
-	Iprocessor    *image.Processor
-	TorController *tor.Controller
+	path           string
+	db             *bun.DB
+	imageProcessor *image.Processor
+	torController  *tor.Controller
 
-	masterKey []byte
-	salt      []byte
+	dek    []byte
+	config *config.VaultConfig
 }
 
-func NewVault(path string, masterKey []byte, salt []byte) *Vault {
+func NewVault(path string, cfg *config.VaultConfig) *Vault {
 	return &Vault{
-		masterKey: masterKey,
-		salt:      salt,
-		Path:      path,
-		Config:    &config.Config{UserDir: path},
+		path:   path,
+		config: cfg,
 	}
 }
 
-func (v *Vault) SetUp(userPath string) error {
-	// Make directories
-	err := os.MkdirAll(v.Path, 0700)
-	if err != nil {
-		return fmt.Errorf("creating user dir: %w", err)
-	}
-
-	//  Config
-	v.Config, err = config.DefaultConfig(userPath)
+func (v *Vault) SetUp() error {
+	var err error
+	v.imageProcessor, err = image.NewProcessor(v.config.ThumbsDir, 320, 0)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Initialized Govips")
 
-	// Tor address
-	t, err := tor.NewController(v.Config.APIPort)
+	v.db, err = db.InitDB(v.path, v.dek)
 	if err != nil {
 		return err
 	}
-	// Save ed25519 key on config
-	_, err = t.CreateOrRecoverKey(v.Config)
-	if err != nil {
-		return err
-	}
-
-	// Save for the first time
-	v.Config.SaveConfigFile(v.masterKey, v.salt)
-
-	// Database
-	v.DB, err = db.InitDB(v.Path, v.masterKey)
-	if err != nil {
-		return err
-	}
-	// TODO: Incorporar esto al bloqueo de la vault, defer.
-	v.DB.Close()
-
+	fmt.Println("Connected to db")
 	return nil
 }

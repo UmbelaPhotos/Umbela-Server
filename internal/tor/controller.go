@@ -12,14 +12,14 @@ import (
 
 type Controller struct {
 	dataDir      string
-	APIPort      int
+	config 		 *config.ServerConfig
 	onionAddress string
 	onionID      string
 	tor          *tor.Tor
 	onion        *tor.OnionService
 }
 
-func NewController(APIPort int) (*Controller, error) {
+func NewController(cfg *config.ServerConfig) (*Controller, error) {
 	tempDir, err := os.MkdirTemp("", "umbela-tor-*")
 	if err != nil {
 		return nil, fmt.Errorf("Error making the directory %w", err)
@@ -32,28 +32,28 @@ func NewController(APIPort int) (*Controller, error) {
 
 	return &Controller{
 		dataDir: tempDir,
-		APIPort: APIPort,
+		config: cfg,
 	}, nil
 }
 
-func (c *Controller) CreateOrRecoverKey(cfg *config.Config) (ed25519.KeyPair, error) {
+func (c *Controller) CreateOrRecoverKey() (ed25519.KeyPair, error) {
 	var key ed25519.KeyPair
 
-	if len(cfg.TorEd25519) != 0 {
-		key = ed25519.FromCryptoPrivateKey(cfg.TorEd25519)
+	if len(c.config.TorEd25519) != 0 {
+		key = ed25519.FromCryptoPrivateKey(c.config.TorEd25519)
 	} else {
 		var err error
 		key, err = ed25519.GenerateKey(nil)
 		if err != nil {
 			return nil, fmt.Errorf("error generando key: %w", err)
 		}
-		cfg.TorEd25519 = key.PrivateKey()
+		c.config.TorEd25519 = key.PrivateKey()
 	}
 	return key, nil
 }
 
-func (c *Controller) Start(ctx context.Context, cfg *config.Config) error {
-	key, err := c.CreateOrRecoverKey(cfg)
+func (c *Controller) Start(ctx context.Context) error {
+	key, err := c.CreateOrRecoverKey()
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (c *Controller) Start(ctx context.Context, cfg *config.Config) error {
 
 	onion, err := t.Listen(ctx, &tor.ListenConf{
 		RemotePorts: []int{80},
-		LocalPort:   c.APIPort,
+		LocalPort:   c.config.APIPort,
 		Key:         key,
 	})
 

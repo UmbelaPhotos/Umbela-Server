@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"umbela-server/internal/config"
 	"umbela-server/internal/crypto"
 	"umbela-server/internal/image"
 	"umbela-server/internal/models"
@@ -20,23 +21,23 @@ type Result struct {
 }
 
 // IngestPhotos orchestrate the concurrent processing pipeline.
-func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Processor, repo *storage.PhotoRepository, imagesDir string, dryRun bool, move bool, masterKey []byte) {
+func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Processor, repo *storage.PhotoRepository, config *config.VaultConfig, dryRun bool, move bool) {
 	fmt.Println("Starting ingest")
 	jobs := make(chan *FileGroup, 100)
 	results := make(chan Result, 100)
 
 	var wg sync.WaitGroup
-	const numWorkers = 8 
+	const numWorkers = 8
 
 	for range numWorkers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for group := range jobs {
-				if ctx.Err() != nil{
+				if ctx.Err() != nil {
 					return
 				}
-				photo, err := processGroup(ctx, group, processor, repo, imagesDir, dryRun, move, masterKey)
+				photo, err := processGroup(ctx, group, processor, repo, config.ImageDir, dryRun, move, config.DEK)
 				results <- Result{Group: group, Photo: photo, Err: err}
 			}
 		}()
@@ -60,7 +61,7 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 			fmt.Printf("error processing %s: %v\n", res.Group.ImagePaths[0], res.Err)
 			failed++
 		} else if res.Photo == nil {
-			skipped++ 
+			skipped++
 		} else {
 			processed++
 		}
@@ -70,8 +71,8 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 }
 
 // processGroup life cycle of a photo being processed
-func processGroup(ctx context.Context, group *FileGroup, processor *image.Processor, repo *storage.PhotoRepository, imagesDir string, dryRun, move bool, masterKey []byte) (*models.Photo, error) {
-	imagePath := group.ImagePaths[0] 
+func processGroup(ctx context.Context, group *FileGroup, processor *image.Processor, repo *storage.PhotoRepository, imagesDir string, dryRun, move bool, DEK []byte) (*models.Photo, error) {
+	imagePath := group.ImagePaths[0]
 	if imagePath == "" {
 		return nil, nil
 	}
@@ -96,7 +97,7 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 	} else {
 		metadata, metaErr = image.ExtractEXIF(imagePath)
 	}
-	
+
 	if metaErr != nil || metadata == nil {
 		metadata = &image.EXIFData{Title: filepath.Base(imagePath)}
 	}
@@ -111,7 +112,7 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 		CapturedAt:  metadata.CapturedAt,
 		Latitude:    metadata.Latitude,
 		Longitude:   metadata.Longitude,
-		FilePath:    destPath, 
+		FilePath:    destPath,
 	}
 
 	if !dryRun {
@@ -119,7 +120,7 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 			return nil, fmt.Errorf("dreating target directory: %w", err)
 		}
 
-		thumbResult, err := processor.GenerateThumbnailAndBlurHash(imagePath, hash, masterKey)
+		thumbResult, err := processor.GenerateThumbnailAndBlurHash(imagePath, hash, DEK)
 		if err != nil {
 			return nil, fmt.Errorf("generating thumbnail: %w", err)
 		}
@@ -130,8 +131,8 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 		if err != nil {
 			return nil, fmt.Errorf("reading original image: %w", err)
 		}
-		
-		if err := processor.SaveImage(destPath, plainBytes, masterKey); err != nil {
+
+		if err := processor.SaveImage(destPath, plainBytes, DEK); err != nil {
 			return nil, fmt.Errorf("saving encrypted original image: %w", err)
 		}
 
