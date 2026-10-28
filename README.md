@@ -231,7 +231,7 @@ Umbela uses [Cobra](https://github.com/spf13/cobra) for a structured, modular an
 umbela [command] [flags]
 
 Main commands:
-  create                      Initializes a new Vault: derives the masterKey,
+  create                      Initializes a new Vault: derives the KEK,
                               generates the Ed25519 network keys and creates
                               the encrypted database.
   add <username> <path>       Imports images or a Google Takeout ZIP into the Vault.

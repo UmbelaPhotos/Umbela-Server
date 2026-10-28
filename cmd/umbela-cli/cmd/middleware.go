@@ -17,9 +17,9 @@ import (
 type contextKey string
 
 const (
-	CtxKeyMasterKey contextKey = "masterKey"
+	CtxKeyKEK       contextKey = "KEK"
 	CtxKeyVaultPath contextKey = "vaultPath"
-	CtxKeySalt		contextKey = "salt"
+	CtxKeySalt      contextKey = "salt"
 )
 
 type CommandRun func(cmd *cobra.Command, args []string) error
@@ -37,7 +37,7 @@ func Chain(finalFunc CommandRun, middlewares ...Middleware) CommandRun {
 func RequireAuth(next CommandRun) CommandRun {
 	return func(cmd *cobra.Command, args []string) error {
 		username := args[0]
-		passwordBytes, err := ReadPasswordClean("Enter your password: ") 
+		passwordBytes, err := ReadPasswordClean("Enter your password: ")
 
 		if err != nil {
 			return err
@@ -50,20 +50,19 @@ func RequireAuth(next CommandRun) CommandRun {
 			return fmt.Errorf("system error: %w", err)
 		}
 
-		masterKey := crypto.DeriveMasterKey(passwordBytes, userSalt)
+		KEK := crypto.DeriveKEK(passwordBytes, userSalt)
 		dbPath := filepath.Join(userFolder, "database.db")
 
 		// Check password
-		err = db.TestUnlock(dbPath, masterKey)
+		err = db.TestUnlock(dbPath, KEK)
 		if errors.Is(err, db.ErrInvalidDatabasePassword) {
 			return ErrUserOrPasswordIncorrect
-		} else if err!=nil{
+		} else if err != nil {
 			return err
 		}
-		
 
 		ctx := cmd.Context()
-		ctx = context.WithValue(ctx, CtxKeyMasterKey, masterKey)
+		ctx = context.WithValue(ctx, CtxKeyKEK, KEK)
 		ctx = context.WithValue(ctx, CtxKeyVaultPath, userFolder)
 		ctx = context.WithValue(ctx, CtxKeySalt, userSalt)
 
@@ -75,7 +74,7 @@ func RequireAuth(next CommandRun) CommandRun {
 
 func RequireUsername(username string) (string, error) {
 	// Check for the config file
-	userVault,_, err := vault.FindUserFolder(username)
+	userVault, _, err := vault.FindUserFolder(username)
 
 	if errors.Is(err, vault.ErrUserNotFound) {
 		return "", err
@@ -115,14 +114,14 @@ func RequireServerNotRunning(next CommandRun) CommandRun {
 }
 
 type ContextSecrets struct {
-	MasterKey []byte
+	KEK       []byte
 	VaultPath string
 	Salt      []byte
 }
 
 func GetContextSecrets(ctx context.Context) (ContextSecrets, error) {
-	masterKey, ok := ctx.Value(CtxKeyMasterKey).([]byte)
-	if !ok || len(masterKey) == 0 {
+	KEK, ok := ctx.Value(CtxKeyKEK).([]byte)
+	if !ok || len(KEK) == 0 {
 		return ContextSecrets{}, fmt.Errorf("master key no encontrada en el contexto")
 	}
 
@@ -137,7 +136,7 @@ func GetContextSecrets(ctx context.Context) (ContextSecrets, error) {
 	}
 
 	return ContextSecrets{
-		MasterKey: masterKey,
+		KEK:       KEK,
 		VaultPath: vaultPath,
 		Salt:      salt,
 	}, nil

@@ -10,12 +10,12 @@ import (
 	_ "github.com/mutecomm/go-sqlcipher/v4"
 )
 
-func TestUnlock(dbPath string, masterKey []byte) error {
-	hexKey := hex.EncodeToString(masterKey)
+func TestUnlock(dbPath string, KEK []byte) error {
+	hexKey := hex.EncodeToString(KEK)
 
 	values := url.Values{}
 	values.Add("_pragma_key", fmt.Sprintf("x'%s'", hexKey))
-	values.Add("_pragma_cipher_page_size", "4096") 
+	values.Add("_pragma_cipher_page_size", "4096")
 
 	dsn := fmt.Sprintf("file:%s?%s", dbPath, values.Encode())
 
@@ -26,7 +26,7 @@ func TestUnlock(dbPath string, masterKey []byte) error {
 	}
 	defer sqldb.Close()
 
-	// dummy query 
+	// dummy query
 	var version string
 	err = sqldb.QueryRow("SELECT sqlite_version();").Scan(&version)
 
@@ -36,7 +36,7 @@ func TestUnlock(dbPath string, masterKey []byte) error {
 		if strings.Contains(errMsg, "file is not a database") {
 			return ErrInvalidDatabasePassword
 		}
-		
+
 		return fmt.Errorf("testing db: %w (%s)", ErrDatabaseCorrupt, errMsg)
 	}
 

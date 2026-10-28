@@ -1,2 +1,3 @@
 package auth
-// SessionManager: mapea SessionToken -> UserHash + MasterKeyRef
+
+// SessionManager: mapea SessionToken -> UserHash + KEKRef

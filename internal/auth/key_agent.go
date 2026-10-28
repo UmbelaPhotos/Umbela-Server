@@ -1,2 +1,3 @@
 package auth
-// Mantiene MasterKey en RAM, TTL de 15 min, memzero
+
+// Mantiene KEK en RAM, TTL de 15 min, memzero

@@ -1,49 +1,44 @@
-syntax="proto3"
+syntax = "proto3";
 
-package auth.v1
-
-option go_package = "umbela-server/internal/api/pb"
-
-import "google/protobuf/timestamp.proto";
+package umbela.v1;
+option go_package = "umbela-server/internal/api/pb";
 
 service AuthService {
-    rpc Register (RegisterRequest) returns (RegisterResponse);
-    rpc Login (LoginRequest) returns (LoginResponse);
-    rpc Logout (LogoutRequest) returns (LogoutResponse);
+  // Prueba la posesión de la clave Ed25519 del servidor (QR)[cite: 11]
+  rpc Identify(IdentifyRequest) returns (IdentifyResponse);
+
+  // Entrega la KEK, desbloquea la RAM y genera el token de sesión[cite: 11]
+  rpc Unlock(UnlockRequest) returns (UnlockResponse);
+
+  // Consulta el estado del Vault y la expiración del token
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+
+  // Fuerza el bloqueo inmediato del Vault y destruye tokens en RAM
+  rpc Lock(LockRequest) returns (LockResponse);
 }
 
-message RegisterRequest{
-    string username = 1;
-    string password = 2;
+message IdentifyRequest {
+  bytes nonce = 1;
+}
+message IdentifyResponse {
+  bytes signature = 1;
 }
 
-message RegisterResponse{
-    User user = 1;
+message UnlockRequest {
+  bytes kek = 1;
+}
+message UnlockResponse {
+  string session_token = 1;
+  int64 expires_at_unix = 2;
 }
 
-message LoginRequest{
-    string username = 1;
-    string password = 2;
+message GetStatusRequest {}
+message GetStatusResponse {
+  bool is_unlocked = 1;
+  int64 expires_at_unix = 2;
 }
 
-message LoginResponse{
-    string refresh_token = 1;
-    string access_token = 2;
-    User user = 3;
-}
-
-message RefreshTokenRequest{
-    string refresh_token = 1;
-}
-
-message RefreshTokenResponse {
-    string refresh_token = 1;
-    string access_token = 2;
-}
-
-message User {
-    int64 id = 1;
-    string username = 2;
-    string profile_path = 3;
-    google.protobuf.Timestamp created_at = 4;
+message LockRequest {}
+message LockResponse {
+  bool success = 1;
 }

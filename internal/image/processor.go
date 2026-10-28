@@ -15,7 +15,7 @@ import (
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/rwcarlsen/goexif/exif"
 	"golang.org/x/image/webp"
-) 
+)
 
 // ProcessResult has the result of processing an image.
 type ProcessResult struct {
@@ -56,17 +56,17 @@ type GoogleMetadata struct {
 
 // NewProcessor initializes Govips and prepares directories
 func NewProcessor(thumbsDir string, thumbWidth int, thumbHeight int) (*Processor, error) {
-	err:= vips.Startup(nil)
+	err := vips.Startup(nil)
 	vips.LoggingSettings(nil, vips.LogLevelError)
-	if err!= nil{
+	if err != nil {
 		return nil, fmt.Errorf("starting new process of govips %w", err)
 	}
 	os.MkdirAll(thumbsDir, 0700)
 	return &Processor{
-		thumbsDir: thumbsDir, 
-		thumbWidth: thumbWidth, 
+		thumbsDir:   thumbsDir,
+		thumbWidth:  thumbWidth,
 		thumbHeight: thumbHeight,
-		}, nil
+	}, nil
 }
 
 // Shutdown cleans the resources of govips. Use with defer after initializing.
@@ -74,20 +74,20 @@ func (p *Processor) Shutdown() {
 	vips.Shutdown()
 }
 
-func (p *Processor) SaveImage(filePath string, imageBytes []byte,  masterKey []byte) error {
-	encryptedBytes, err := crypto.EncryptGCM(imageBytes, masterKey)
-	if err!=nil{
+func (p *Processor) SaveImage(filePath string, imageBytes []byte, DEK []byte) error {
+	encryptedBytes, err := crypto.EncryptGCM(imageBytes, DEK)
+	if err != nil {
 		return fmt.Errorf("encrypting image: %w", err)
 	}
 
 	err = os.WriteFile(filePath, encryptedBytes, 0600)
-	if err!=nil{
+	if err != nil {
 		return fmt.Errorf("writing file: %w", err)
 	}
 	return nil
 }
 
-func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string, masterKey []byte) (*ProcessResult, error) {
+func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string, DEK []byte) (*ProcessResult, error) {
 	thumbPath := filepath.Join(p.thumbsDir, hash+".umb")
 
 	vipsImage, err := vips.NewImageFromFile(srcPath)
@@ -95,14 +95,14 @@ func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string, masterKey
 		return nil, fmt.Errorf("opening image with govips: %w", err)
 	}
 	defer vipsImage.Close()
-	
+
 	_ = vipsImage.AutoRotate()
 
 	// original dimensions
 	originalWidth := vipsImage.Width()
 	originalHeight := vipsImage.Height()
 
-	imageBlurhash, err:=GenerateBlurhash(vipsImage, originalWidth)
+	imageBlurhash, err := GenerateBlurhash(vipsImage, originalWidth)
 
 	// Reducing the image with Lanczos3 algorithm
 	scale := float64(p.thumbWidth) / float64(originalWidth)
@@ -117,13 +117,13 @@ func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string, masterKey
 		return nil, fmt.Errorf("exporting webp: %w", err)
 	}
 
-	if err:= p.SaveImage(thumbPath, webpBytes, masterKey); err!=nil{
+	if err := p.SaveImage(thumbPath, webpBytes, DEK); err != nil {
 		return nil, fmt.Errorf("saving encrypted thumbnail: %w", err)
 	}
 
 	return &ProcessResult{
 		ThumbPath: thumbPath,
-		Blurhash:  imageBlurhash, 
+		Blurhash:  imageBlurhash,
 		Width:     originalWidth,
 		Height:    originalHeight,
 	}, nil
@@ -157,7 +157,7 @@ func GenerateBlurhash(vipsImage *vips.ImageRef, originalWidth int) (string, erro
 		return "", fmt.Errorf("encoding blurhash: %w", err)
 	}
 
-	return bh, nil 
+	return bh, nil
 }
 
 func ExtractEXIF(srcPath string) (*EXIFData, error) {
@@ -231,23 +231,23 @@ func ProcessMetadataJSON(srcPath string) (*EXIFData, error) {
 
 	err = json.NewDecoder(f).Decode(&jsonMetadata)
 
-	if err!=nil{
+	if err != nil {
 		fmt.Printf("Warning: Could not decode JSON: %s: %v\n", srcPath, err)
 		return imageMetadata, nil
 	}
 
 	timestamp, err := strconv.ParseInt(jsonMetadata.PhotoTakenTime.Timestamp, 10, 64)
 
-	if err!= nil{
-		timestamp=time.Now().Unix()
+	if err != nil {
+		timestamp = time.Now().Unix()
 	}
 
 	imageMetadata.Title = jsonMetadata.Title
 	imageMetadata.Description = jsonMetadata.Description
-	imageMetadata.CapturedAt = timestamp 
+	imageMetadata.CapturedAt = timestamp
 	imageMetadata.Latitude = jsonMetadata.GeoData.Latitude
 	imageMetadata.Longitude = jsonMetadata.GeoData.Longitude
-	imageMetadata.Artist = "user" 
+	imageMetadata.Artist = "user"
 
 	return imageMetadata, nil
 }

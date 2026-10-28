@@ -9,27 +9,28 @@ import (
 )
 
 // Only creates dirs
-
-func (c *Config) ReadConfigFile(masterKey []byte) error {
-	configPath := filepath.Join(c.UserDir, "config.bin")
+func Read(dataDir string, KEK []byte) (*Config, error) {
+	configPath := filepath.Join(dataDir, "config.bin")
 	fileBytes, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("reading config file: %w", err)
+		return nil, fmt.Errorf("reading config file: %w", err)
 	}
 
-	if len(fileBytes) < 16 {
-		return fmt.Errorf("unsufficient number of bytes")
+	// 16 bytes of salt + 12 nonce  
+	if len(fileBytes) < 28 {
+		return nil, fmt.Errorf("unsufficient number of bytes")
 	}
 	dataBytes := fileBytes[16:]
-	decryptedBytes, err := crypto.DecryptGCM(dataBytes, masterKey)
+	decryptedBytes, err := crypto.DecryptGCM(dataBytes, KEK)
 	if err != nil {
-		return fmt.Errorf("decrypting config file: %w", err)
+		return nil, fmt.Errorf("decrypting config file: %w", err)
 	}
 	defer crypto.CleanBytes(decryptedBytes)
 
+	c:=&Config{}
 	err = json.Unmarshal(decryptedBytes, c)
 	if err != nil {
-		return fmt.Errorf("config file json unmarshal: %w", err)
+		return nil, fmt.Errorf("config file json unmarshal: %w", err)
 	}
-	return nil
+	return c, nil
 }

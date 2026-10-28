@@ -8,10 +8,10 @@ import (
 
 // Unique per user
 // Salt will be saved in the first 16 bytes of the config
-func GenerateSalt() ([]byte, error){
-	salt := make([]byte, 16)
+func RandomBytes(length int) ([]byte, error) {
+	salt := make([]byte, length)
 	_, err := io.ReadFull(rand.Reader, salt)
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("making salt: %w", err)
 	}
 

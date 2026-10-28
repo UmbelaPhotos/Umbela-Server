@@ -1,6 +1,165 @@
 syntax = "proto3";
 
-package photo.v1;
-option go_package = "umbela-server/internal/api/pb"
+package umbela.v1;
+option go_package = "umbela-server/internal/api/pb";
 
-service 
+service PhotoService {
+  rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse);
+  rpc StreamThumbnail(GetThumbnailRequest) returns (stream Chunk);
+  rpc StreamFullImage(GetFullImageRequest) returns (stream Chunk);
+  rpc GetPhotoDetails(GetPhotoDetailsRequest) returns (GetPhotoDetailsResponse);
+
+  // Acciones sobre fotos (Pantalla 7 - Visor)
+  rpc ToggleFavorite(ToggleFavoriteRequest) returns (ToggleFavoriteResponse);
+  rpc DeletePhoto(DeletePhotoRequest) returns (DeletePhotoResponse);
+  rpc AddPhotoToAlbum(AddPhotoToAlbumRequest) returns (AddPhotoToAlbumResponse);
+
+  rpc ListPeople(ListPeopleRequest) returns (ListPeopleResponse);
+  rpc LabelPerson(LabelPersonRequest) returns (LabelPersonResponse);
+  rpc GetPersonDetails(GetPersonDetailsRequest) returns (GetPersonDetailsResponse);
+
+  rpc ListAlbums(ListAlbumsRequest) returns (ListAlbumsResponse);
+  rpc CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse);
+
+  rpc ListPlaces(ListPlacesRequest) returns (ListPlacesResponse);
+}
+
+message Chunk {
+  bytes data = 1;
+}
+
+message PhotoSummary {
+  string id = 1;
+  int64 taken_at_unix = 2;
+  bool is_video = 3;
+  string blurhash = 4;
+  int32 width = 5;
+  int32 height = 6;
+}
+
+message GetTimelineRequest {
+  int64 from_unix = 1;
+  int64 to_unix = 2;
+  string person_id = 3;
+  string album_id = 4;
+  string place_id = 5;
+}
+message GetTimelineResponse {
+  repeated PhotoSummary photos = 1;
+}
+
+message GetThumbnailRequest {
+  string photo_id = 1;
+  int32 max_size = 2;
+}
+message GetFullImageRequest {
+  string photo_id = 1;
+}
+
+message FaceInPhoto {
+  string person_id = 1;
+  string name = 2;
+  float confidence = 3;
+}
+
+message PhotoDetails {
+  PhotoSummary summary = 1;
+  string uploader = 2;
+  string place_name = 3;
+  double latitude = 4;
+  double longitude = 5;
+  int32 iso = 6;
+  float aperture = 7;
+  bool encrypted_at_rest = 8;
+  bool favorite = 9;
+  repeated FaceInPhoto faces = 10;
+}
+message GetPhotoDetailsRequest {
+  string photo_id = 1;
+}
+message GetPhotoDetailsResponse {
+  PhotoDetails photo = 1;
+}
+
+message ToggleFavoriteRequest {
+  string photo_id = 1;
+}
+message ToggleFavoriteResponse {
+  bool is_favorite = 1;
+}
+
+message DeletePhotoRequest {
+  string photo_id = 1;
+}
+message DeletePhotoResponse {
+  bool success = 1;
+}
+
+message AddPhotoToAlbumRequest {
+  string photo_id = 1;
+  string album_id = 2;
+}
+message AddPhotoToAlbumResponse {
+  bool success = 1;
+}
+
+message PersonSummary {
+  string id = 1;
+  string name = 2;
+  int32 photo_count = 3;
+  string cover_photo_id = 4;
+}
+message ListPeopleRequest {}
+message ListPeopleResponse {
+  repeated PersonSummary people = 1;
+}
+message LabelPersonRequest {
+  string person_id = 1;
+  string name = 2;
+}
+message LabelPersonResponse {
+  PersonSummary person = 1;
+}
+
+message AlbumSummary {
+  string id = 1;
+  string name = 2;
+  int32 photo_count = 3;
+  string cover_photo_id = 4;
+  bool encrypted = 5;
+  bool has_video_cover = 6;
+}
+message PlaceSummary {
+  string id = 1;
+  string name = 2;
+  int32 photo_count = 3;
+  double latitude = 4;
+  double longitude = 5;
+  string cover_photo_id = 6;
+}
+
+message GetPersonDetailsRequest {
+  string person_id = 1;
+}
+message GetPersonDetailsResponse {
+  PersonSummary person = 1;
+  repeated AlbumSummary albums = 2;
+  repeated PlaceSummary places = 3;
+  repeated PhotoSummary photos = 4;
+}
+
+message ListAlbumsRequest {}
+message ListAlbumsResponse {
+  repeated AlbumSummary albums = 1;
+}
+message CreateAlbumRequest {
+  string name = 1;
+}
+message CreateAlbumResponse {
+  AlbumSummary album = 1;
+}
+
+message ListPlacesRequest {}
+message ListPlacesResponse {
+  repeated PlaceSummary places = 1;
+}
