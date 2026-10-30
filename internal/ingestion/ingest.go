@@ -12,6 +12,8 @@ import (
 	"umbela-server/internal/image"
 	"umbela-server/internal/models"
 	"umbela-server/internal/storage"
+
+	"github.com/schollz/progressbar/v3"
 )
 
 type Result struct {
@@ -23,6 +25,7 @@ type Result struct {
 // IngestPhotos orchestrate the concurrent processing pipeline.
 func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Processor, repo *storage.PhotoRepository, config *config.VaultConfig, dryRun bool, move bool) {
 	fmt.Println("Starting ingest")
+	total := len(groups)
 	jobs := make(chan *FileGroup, 100)
 	results := make(chan Result, 100)
 
@@ -55,15 +58,42 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 		close(results)
 	}()
 
+	bar := progressbar.NewOptions(total,
+		progressbar.OptionEnableColorCodes(true), 
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionSetItsString("photos"),
+		progressbar.OptionSetPredictTime(true),
+		progressbar.OptionSetWidth(20),
+		progressbar.OptionSetDescription("Ingesting photos"),
+		progressbar.OptionSetTheme(progressbar.Theme{
+        Saucer:        "[magenta]=[reset]",
+        SaucerHead:    "[magenta]>[reset]",
+        SaucerPadding: " ",
+        BarStart:      "[",
+        BarEnd:        "]",
+    	}))
+
 	var processed, skipped, failed int
+	var errLogs []string
 	for res := range results {
+		_ = bar.Add(1)
 		if res.Err != nil {
-			fmt.Printf("error processing %s: %v\n", res.Group.ImagePaths[0], res.Err)
+			errLogs = append(errLogs, fmt.Sprintf("error processing %s: %v", res.Group.ImagePaths[0], res.Err))
 			failed++
 		} else if res.Photo == nil {
 			skipped++
 		} else {
 			processed++
+		}
+		bar.Describe(fmt.Sprintf("[white]Ingesting[reset] ([green]%dP[reset]/[dark_gray]%dS[reset]/[light_red]%dF[reset])", processed, skipped, failed))
+	}
+
+	fmt.Println("\n") 
+
+	if len(errLogs) > 0 {
+		for _, errStr := range errLogs {
+			fmt.Printf("%s\n", errStr)
 		}
 	}
 

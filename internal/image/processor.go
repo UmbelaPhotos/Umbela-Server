@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"time"
 	"umbela-server/internal/crypto"
 
@@ -56,8 +55,8 @@ type GoogleMetadata struct {
 
 // NewProcessor initializes Govips and prepares directories
 func NewProcessor(thumbsDir string, thumbWidth int, thumbHeight int) (*Processor, error) {
-	err := vips.Startup(nil)
 	vips.LoggingSettings(nil, vips.LogLevelError)
+	err := vips.Startup(nil)
 	if err != nil {
 		return nil, fmt.Errorf("starting new process of govips %w", err)
 	}
@@ -167,20 +166,18 @@ func ExtractEXIF(srcPath string) (*EXIFData, error) {
 	}
 	defer f.Close()
 
+	capturedAt := time.Now().Unix()
+	if info, err := f.Stat(); err == nil {
+		capturedAt = info.ModTime().Unix()
+	}
+
 	imageMetadata := &EXIFData{
-		Title: filepath.Base(srcPath),
+		Title:      filepath.Base(srcPath),
+		CapturedAt: capturedAt,
 	}
 
 	x, err := exif.Decode(f)
 	if err != nil {
-		if exif.IsCriticalError(err) {
-			ext := strings.ToLower(filepath.Ext(srcPath))
-			if ext == ".heic" {
-				fmt.Println("Info: HEIC metadata extraction not supported yet")
-			} else {
-				fmt.Printf("Warning: Could not decode EXIF for %s: %v\n", srcPath, err)
-			}
-		}
 		if info, statErr := f.Stat(); statErr == nil {
 			imageMetadata.CapturedAt = info.ModTime().Unix()
 		} else {

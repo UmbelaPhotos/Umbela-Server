@@ -8,7 +8,6 @@ import (
 	"umbela-server/internal/crypto"
 )
 
-// Only creates dirs
 func Read(dataDir string, KEK []byte) (*Config, error) {
 	configPath := filepath.Join(dataDir, "config.bin")
 	fileBytes, err := os.ReadFile(configPath)

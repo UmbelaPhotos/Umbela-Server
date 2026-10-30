@@ -5,598 +5,502 @@
 package pbconnect
 
 import (
-	connect "connectrpc.com/connect/v2"
+	connect "connectrpc.com/connect"
 	context "context"
-	sync "sync"
+	errors "errors"
+	http "net/http"
+	strings "strings"
 	pb "umbela-server/internal/api/pb"
 )
+
+// This is a compile-time assertion to ensure that this generated file and the connect package are
+// compatible. If you get a compiler error that this constant is not defined, this code was
+// generated with a version of connect newer than the one compiled into your binary. You can fix the
+// problem by either regenerating this code with an older version of connect or updating the connect
+// version compiled into your binary.
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// PhotoServiceName is the fully-qualified name of the PhotoService service.
 	PhotoServiceName = "umbela.v1.PhotoService"
 )
 
-// These constants are the procedure names of the RPCs defined in this package. They're exposed at
-// runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// PhotoServiceGetTimelineProcedure is the procedure name of the PhotoService's GetTimeline RPC.
+	// PhotoServiceGetTimelineProcedure is the fully-qualified name of the PhotoService's GetTimeline
+	// RPC.
 	PhotoServiceGetTimelineProcedure = "/umbela.v1.PhotoService/GetTimeline"
-	// PhotoServiceStreamThumbnailProcedure is the procedure name of the PhotoService's StreamThumbnail
-	// RPC.
+	// PhotoServiceGetTimelineBucketsProcedure is the fully-qualified name of the PhotoService's
+	// GetTimelineBuckets RPC.
+	PhotoServiceGetTimelineBucketsProcedure = "/umbela.v1.PhotoService/GetTimelineBuckets"
+	// PhotoServiceStreamThumbnailProcedure is the fully-qualified name of the PhotoService's
+	// StreamThumbnail RPC.
 	PhotoServiceStreamThumbnailProcedure = "/umbela.v1.PhotoService/StreamThumbnail"
-	// PhotoServiceStreamFullImageProcedure is the procedure name of the PhotoService's StreamFullImage
-	// RPC.
+	// PhotoServiceStreamFullImageProcedure is the fully-qualified name of the PhotoService's
+	// StreamFullImage RPC.
 	PhotoServiceStreamFullImageProcedure = "/umbela.v1.PhotoService/StreamFullImage"
-	// PhotoServiceGetPhotoDetailsProcedure is the procedure name of the PhotoService's GetPhotoDetails
-	// RPC.
+	// PhotoServiceGetPhotoDetailsProcedure is the fully-qualified name of the PhotoService's
+	// GetPhotoDetails RPC.
 	PhotoServiceGetPhotoDetailsProcedure = "/umbela.v1.PhotoService/GetPhotoDetails"
-	// PhotoServiceToggleFavoriteProcedure is the procedure name of the PhotoService's ToggleFavorite
-	// RPC.
+	// PhotoServiceToggleFavoriteProcedure is the fully-qualified name of the PhotoService's
+	// ToggleFavorite RPC.
 	PhotoServiceToggleFavoriteProcedure = "/umbela.v1.PhotoService/ToggleFavorite"
-	// PhotoServiceDeletePhotoProcedure is the procedure name of the PhotoService's DeletePhoto RPC.
-	PhotoServiceDeletePhotoProcedure = "/umbela.v1.PhotoService/DeletePhoto"
-	// PhotoServiceAddPhotoToAlbumProcedure is the procedure name of the PhotoService's AddPhotoToAlbum
+	// PhotoServiceDeletePhotoProcedure is the fully-qualified name of the PhotoService's DeletePhoto
 	// RPC.
+	PhotoServiceDeletePhotoProcedure = "/umbela.v1.PhotoService/DeletePhoto"
+	// PhotoServiceAddPhotoToAlbumProcedure is the fully-qualified name of the PhotoService's
+	// AddPhotoToAlbum RPC.
 	PhotoServiceAddPhotoToAlbumProcedure = "/umbela.v1.PhotoService/AddPhotoToAlbum"
-	// PhotoServiceListPeopleProcedure is the procedure name of the PhotoService's ListPeople RPC.
+	// PhotoServiceListPeopleProcedure is the fully-qualified name of the PhotoService's ListPeople RPC.
 	PhotoServiceListPeopleProcedure = "/umbela.v1.PhotoService/ListPeople"
-	// PhotoServiceLabelPersonProcedure is the procedure name of the PhotoService's LabelPerson RPC.
+	// PhotoServiceLabelPersonProcedure is the fully-qualified name of the PhotoService's LabelPerson
+	// RPC.
 	PhotoServiceLabelPersonProcedure = "/umbela.v1.PhotoService/LabelPerson"
-	// PhotoServiceGetPersonDetailsProcedure is the procedure name of the PhotoService's
+	// PhotoServiceGetPersonDetailsProcedure is the fully-qualified name of the PhotoService's
 	// GetPersonDetails RPC.
 	PhotoServiceGetPersonDetailsProcedure = "/umbela.v1.PhotoService/GetPersonDetails"
-	// PhotoServiceListAlbumsProcedure is the procedure name of the PhotoService's ListAlbums RPC.
+	// PhotoServiceListAlbumsProcedure is the fully-qualified name of the PhotoService's ListAlbums RPC.
 	PhotoServiceListAlbumsProcedure = "/umbela.v1.PhotoService/ListAlbums"
-	// PhotoServiceCreateAlbumProcedure is the procedure name of the PhotoService's CreateAlbum RPC.
+	// PhotoServiceCreateAlbumProcedure is the fully-qualified name of the PhotoService's CreateAlbum
+	// RPC.
 	PhotoServiceCreateAlbumProcedure = "/umbela.v1.PhotoService/CreateAlbum"
-	// PhotoServiceListPlacesProcedure is the procedure name of the PhotoService's ListPlaces RPC.
+	// PhotoServiceListPlacesProcedure is the fully-qualified name of the PhotoService's ListPlaces RPC.
 	PhotoServiceListPlacesProcedure = "/umbela.v1.PhotoService/ListPlaces"
 )
 
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	photoServiceGetTimelineSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("GetTimeline"),
-			Procedure:  PhotoServiceGetTimelineProcedure,
-		}
-	})
-	photoServiceStreamThumbnailSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeServer,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("StreamThumbnail"),
-			Procedure:  PhotoServiceStreamThumbnailProcedure,
-		}
-	})
-	photoServiceStreamFullImageSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeServer,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("StreamFullImage"),
-			Procedure:  PhotoServiceStreamFullImageProcedure,
-		}
-	})
-	photoServiceGetPhotoDetailsSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("GetPhotoDetails"),
-			Procedure:  PhotoServiceGetPhotoDetailsProcedure,
-		}
-	})
-	photoServiceToggleFavoriteSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("ToggleFavorite"),
-			Procedure:  PhotoServiceToggleFavoriteProcedure,
-		}
-	})
-	photoServiceDeletePhotoSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("DeletePhoto"),
-			Procedure:  PhotoServiceDeletePhotoProcedure,
-		}
-	})
-	photoServiceAddPhotoToAlbumSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("AddPhotoToAlbum"),
-			Procedure:  PhotoServiceAddPhotoToAlbumProcedure,
-		}
-	})
-	photoServiceListPeopleSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("ListPeople"),
-			Procedure:  PhotoServiceListPeopleProcedure,
-		}
-	})
-	photoServiceLabelPersonSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("LabelPerson"),
-			Procedure:  PhotoServiceLabelPersonProcedure,
-		}
-	})
-	photoServiceGetPersonDetailsSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("GetPersonDetails"),
-			Procedure:  PhotoServiceGetPersonDetailsProcedure,
-		}
-	})
-	photoServiceListAlbumsSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("ListAlbums"),
-			Procedure:  PhotoServiceListAlbumsProcedure,
-		}
-	})
-	photoServiceCreateAlbumSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("CreateAlbum"),
-			Procedure:  PhotoServiceCreateAlbumProcedure,
-		}
-	})
-	photoServiceListPlacesSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService").Methods().ByName("ListPlaces"),
-			Procedure:  PhotoServiceListPlacesProcedure,
-		}
-	})
+	photoServiceServiceDescriptor                  = pb.File_internal_api_proto_v1_photo_proto.Services().ByName("PhotoService")
+	photoServiceGetTimelineMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("GetTimeline")
+	photoServiceGetTimelineBucketsMethodDescriptor = photoServiceServiceDescriptor.Methods().ByName("GetTimelineBuckets")
+	photoServiceStreamThumbnailMethodDescriptor    = photoServiceServiceDescriptor.Methods().ByName("StreamThumbnail")
+	photoServiceStreamFullImageMethodDescriptor    = photoServiceServiceDescriptor.Methods().ByName("StreamFullImage")
+	photoServiceGetPhotoDetailsMethodDescriptor    = photoServiceServiceDescriptor.Methods().ByName("GetPhotoDetails")
+	photoServiceToggleFavoriteMethodDescriptor     = photoServiceServiceDescriptor.Methods().ByName("ToggleFavorite")
+	photoServiceDeletePhotoMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("DeletePhoto")
+	photoServiceAddPhotoToAlbumMethodDescriptor    = photoServiceServiceDescriptor.Methods().ByName("AddPhotoToAlbum")
+	photoServiceListPeopleMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListPeople")
+	photoServiceLabelPersonMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("LabelPerson")
+	photoServiceGetPersonDetailsMethodDescriptor   = photoServiceServiceDescriptor.Methods().ByName("GetPersonDetails")
+	photoServiceListAlbumsMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListAlbums")
+	photoServiceCreateAlbumMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("CreateAlbum")
+	photoServiceListPlacesMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListPlaces")
 )
 
 // PhotoServiceClient is a client for the umbela.v1.PhotoService service.
 type PhotoServiceClient interface {
-	GetTimeline(context.Context, *pb.GetTimelineRequest) (*pb.GetTimelineResponse, error)
-	StreamThumbnail(context.Context, *pb.GetThumbnailRequest) (PhotoServiceStreamThumbnailClientStream, error)
-	StreamFullImage(context.Context, *pb.GetFullImageRequest) (PhotoServiceStreamFullImageClientStream, error)
-	GetPhotoDetails(context.Context, *pb.GetPhotoDetailsRequest) (*pb.GetPhotoDetailsResponse, error)
+	GetTimeline(context.Context, *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error)
+	// Photo count per month, newest first. Tiny; lets the client lay out the
+	// whole timeline and jump anywhere before loading a single photo.
+	GetTimelineBuckets(context.Context, *connect.Request[pb.GetTimelineBucketsRequest]) (*connect.Response[pb.GetTimelineBucketsResponse], error)
+	StreamThumbnail(context.Context, *connect.Request[pb.GetThumbnailRequest]) (*connect.ServerStreamForClient[pb.Chunk], error)
+	StreamFullImage(context.Context, *connect.Request[pb.GetFullImageRequest]) (*connect.ServerStreamForClient[pb.Chunk], error)
+	GetPhotoDetails(context.Context, *connect.Request[pb.GetPhotoDetailsRequest]) (*connect.Response[pb.GetPhotoDetailsResponse], error)
 	// Acciones sobre fotos (Pantalla 7 - Visor)
-	ToggleFavorite(context.Context, *pb.ToggleFavoriteRequest) (*pb.ToggleFavoriteResponse, error)
-	DeletePhoto(context.Context, *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error)
-	AddPhotoToAlbum(context.Context, *pb.AddPhotoToAlbumRequest) (*pb.AddPhotoToAlbumResponse, error)
-	ListPeople(context.Context, *pb.ListPeopleRequest) (*pb.ListPeopleResponse, error)
-	LabelPerson(context.Context, *pb.LabelPersonRequest) (*pb.LabelPersonResponse, error)
-	GetPersonDetails(context.Context, *pb.GetPersonDetailsRequest) (*pb.GetPersonDetailsResponse, error)
-	ListAlbums(context.Context, *pb.ListAlbumsRequest) (*pb.ListAlbumsResponse, error)
-	CreateAlbum(context.Context, *pb.CreateAlbumRequest) (*pb.CreateAlbumResponse, error)
-	ListPlaces(context.Context, *pb.ListPlacesRequest) (*pb.ListPlacesResponse, error)
+	ToggleFavorite(context.Context, *connect.Request[pb.ToggleFavoriteRequest]) (*connect.Response[pb.ToggleFavoriteResponse], error)
+	DeletePhoto(context.Context, *connect.Request[pb.DeletePhotoRequest]) (*connect.Response[pb.DeletePhotoResponse], error)
+	AddPhotoToAlbum(context.Context, *connect.Request[pb.AddPhotoToAlbumRequest]) (*connect.Response[pb.AddPhotoToAlbumResponse], error)
+	ListPeople(context.Context, *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error)
+	LabelPerson(context.Context, *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error)
+	GetPersonDetails(context.Context, *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error)
+	ListAlbums(context.Context, *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error)
+	CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error)
+	ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error)
 }
 
-// NewPhotoServiceClient constructs a client for the umbela.v1.PhotoService service. Multiple
-// service clients may share a single connect.Client.
-func NewPhotoServiceClient(client *connect.Client) PhotoServiceClient {
-	return &photoServiceClient{client: client}
-}
-
-// PhotoServiceStreamThumbnailClientStream is the client stream for the PhotoService's
-// StreamThumbnail RPC.
-type PhotoServiceStreamThumbnailClientStream struct {
-	stream connect.ClientStream
-}
-
-// Receive returns the next response message from the server.
-func (s PhotoServiceStreamThumbnailClientStream) Receive() (*pb.Chunk, error) {
-	var res pb.Chunk
-	if err := s.stream.Receive(&res); err != nil {
-		return nil, err
+// NewPhotoServiceClient constructs a client for the umbela.v1.PhotoService service. By default, it
+// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewPhotoServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) PhotoServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	return &photoServiceClient{
+		getTimeline: connect.NewClient[pb.GetTimelineRequest, pb.GetTimelineResponse](
+			httpClient,
+			baseURL+PhotoServiceGetTimelineProcedure,
+			connect.WithSchema(photoServiceGetTimelineMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getTimelineBuckets: connect.NewClient[pb.GetTimelineBucketsRequest, pb.GetTimelineBucketsResponse](
+			httpClient,
+			baseURL+PhotoServiceGetTimelineBucketsProcedure,
+			connect.WithSchema(photoServiceGetTimelineBucketsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		streamThumbnail: connect.NewClient[pb.GetThumbnailRequest, pb.Chunk](
+			httpClient,
+			baseURL+PhotoServiceStreamThumbnailProcedure,
+			connect.WithSchema(photoServiceStreamThumbnailMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		streamFullImage: connect.NewClient[pb.GetFullImageRequest, pb.Chunk](
+			httpClient,
+			baseURL+PhotoServiceStreamFullImageProcedure,
+			connect.WithSchema(photoServiceStreamFullImageMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getPhotoDetails: connect.NewClient[pb.GetPhotoDetailsRequest, pb.GetPhotoDetailsResponse](
+			httpClient,
+			baseURL+PhotoServiceGetPhotoDetailsProcedure,
+			connect.WithSchema(photoServiceGetPhotoDetailsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		toggleFavorite: connect.NewClient[pb.ToggleFavoriteRequest, pb.ToggleFavoriteResponse](
+			httpClient,
+			baseURL+PhotoServiceToggleFavoriteProcedure,
+			connect.WithSchema(photoServiceToggleFavoriteMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deletePhoto: connect.NewClient[pb.DeletePhotoRequest, pb.DeletePhotoResponse](
+			httpClient,
+			baseURL+PhotoServiceDeletePhotoProcedure,
+			connect.WithSchema(photoServiceDeletePhotoMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		addPhotoToAlbum: connect.NewClient[pb.AddPhotoToAlbumRequest, pb.AddPhotoToAlbumResponse](
+			httpClient,
+			baseURL+PhotoServiceAddPhotoToAlbumProcedure,
+			connect.WithSchema(photoServiceAddPhotoToAlbumMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listPeople: connect.NewClient[pb.ListPeopleRequest, pb.ListPeopleResponse](
+			httpClient,
+			baseURL+PhotoServiceListPeopleProcedure,
+			connect.WithSchema(photoServiceListPeopleMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		labelPerson: connect.NewClient[pb.LabelPersonRequest, pb.LabelPersonResponse](
+			httpClient,
+			baseURL+PhotoServiceLabelPersonProcedure,
+			connect.WithSchema(photoServiceLabelPersonMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getPersonDetails: connect.NewClient[pb.GetPersonDetailsRequest, pb.GetPersonDetailsResponse](
+			httpClient,
+			baseURL+PhotoServiceGetPersonDetailsProcedure,
+			connect.WithSchema(photoServiceGetPersonDetailsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listAlbums: connect.NewClient[pb.ListAlbumsRequest, pb.ListAlbumsResponse](
+			httpClient,
+			baseURL+PhotoServiceListAlbumsProcedure,
+			connect.WithSchema(photoServiceListAlbumsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		createAlbum: connect.NewClient[pb.CreateAlbumRequest, pb.CreateAlbumResponse](
+			httpClient,
+			baseURL+PhotoServiceCreateAlbumProcedure,
+			connect.WithSchema(photoServiceCreateAlbumMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		listPlaces: connect.NewClient[pb.ListPlacesRequest, pb.ListPlacesResponse](
+			httpClient,
+			baseURL+PhotoServiceListPlacesProcedure,
+			connect.WithSchema(photoServiceListPlacesMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
-	return &res, nil
 }
 
-// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
-// stream abandoned before io.EOF.
-func (s PhotoServiceStreamThumbnailClientStream) Close() error {
-	return s.stream.Close()
+// photoServiceClient implements PhotoServiceClient.
+type photoServiceClient struct {
+	getTimeline        *connect.Client[pb.GetTimelineRequest, pb.GetTimelineResponse]
+	getTimelineBuckets *connect.Client[pb.GetTimelineBucketsRequest, pb.GetTimelineBucketsResponse]
+	streamThumbnail    *connect.Client[pb.GetThumbnailRequest, pb.Chunk]
+	streamFullImage    *connect.Client[pb.GetFullImageRequest, pb.Chunk]
+	getPhotoDetails    *connect.Client[pb.GetPhotoDetailsRequest, pb.GetPhotoDetailsResponse]
+	toggleFavorite     *connect.Client[pb.ToggleFavoriteRequest, pb.ToggleFavoriteResponse]
+	deletePhoto        *connect.Client[pb.DeletePhotoRequest, pb.DeletePhotoResponse]
+	addPhotoToAlbum    *connect.Client[pb.AddPhotoToAlbumRequest, pb.AddPhotoToAlbumResponse]
+	listPeople         *connect.Client[pb.ListPeopleRequest, pb.ListPeopleResponse]
+	labelPerson        *connect.Client[pb.LabelPersonRequest, pb.LabelPersonResponse]
+	getPersonDetails   *connect.Client[pb.GetPersonDetailsRequest, pb.GetPersonDetailsResponse]
+	listAlbums         *connect.Client[pb.ListAlbumsRequest, pb.ListAlbumsResponse]
+	createAlbum        *connect.Client[pb.CreateAlbumRequest, pb.CreateAlbumResponse]
+	listPlaces         *connect.Client[pb.ListPlacesRequest, pb.ListPlacesResponse]
 }
 
-// PhotoServiceStreamFullImageClientStream is the client stream for the PhotoService's
-// StreamFullImage RPC.
-type PhotoServiceStreamFullImageClientStream struct {
-	stream connect.ClientStream
+// GetTimeline calls umbela.v1.PhotoService.GetTimeline.
+func (c *photoServiceClient) GetTimeline(ctx context.Context, req *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error) {
+	return c.getTimeline.CallUnary(ctx, req)
 }
 
-// Receive returns the next response message from the server.
-func (s PhotoServiceStreamFullImageClientStream) Receive() (*pb.Chunk, error) {
-	var res pb.Chunk
-	if err := s.stream.Receive(&res); err != nil {
-		return nil, err
-	}
-	return &res, nil
+// GetTimelineBuckets calls umbela.v1.PhotoService.GetTimelineBuckets.
+func (c *photoServiceClient) GetTimelineBuckets(ctx context.Context, req *connect.Request[pb.GetTimelineBucketsRequest]) (*connect.Response[pb.GetTimelineBucketsResponse], error) {
+	return c.getTimelineBuckets.CallUnary(ctx, req)
 }
 
-// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
-// stream abandoned before io.EOF.
-func (s PhotoServiceStreamFullImageClientStream) Close() error {
-	return s.stream.Close()
+// StreamThumbnail calls umbela.v1.PhotoService.StreamThumbnail.
+func (c *photoServiceClient) StreamThumbnail(ctx context.Context, req *connect.Request[pb.GetThumbnailRequest]) (*connect.ServerStreamForClient[pb.Chunk], error) {
+	return c.streamThumbnail.CallServerStream(ctx, req)
+}
+
+// StreamFullImage calls umbela.v1.PhotoService.StreamFullImage.
+func (c *photoServiceClient) StreamFullImage(ctx context.Context, req *connect.Request[pb.GetFullImageRequest]) (*connect.ServerStreamForClient[pb.Chunk], error) {
+	return c.streamFullImage.CallServerStream(ctx, req)
+}
+
+// GetPhotoDetails calls umbela.v1.PhotoService.GetPhotoDetails.
+func (c *photoServiceClient) GetPhotoDetails(ctx context.Context, req *connect.Request[pb.GetPhotoDetailsRequest]) (*connect.Response[pb.GetPhotoDetailsResponse], error) {
+	return c.getPhotoDetails.CallUnary(ctx, req)
+}
+
+// ToggleFavorite calls umbela.v1.PhotoService.ToggleFavorite.
+func (c *photoServiceClient) ToggleFavorite(ctx context.Context, req *connect.Request[pb.ToggleFavoriteRequest]) (*connect.Response[pb.ToggleFavoriteResponse], error) {
+	return c.toggleFavorite.CallUnary(ctx, req)
+}
+
+// DeletePhoto calls umbela.v1.PhotoService.DeletePhoto.
+func (c *photoServiceClient) DeletePhoto(ctx context.Context, req *connect.Request[pb.DeletePhotoRequest]) (*connect.Response[pb.DeletePhotoResponse], error) {
+	return c.deletePhoto.CallUnary(ctx, req)
+}
+
+// AddPhotoToAlbum calls umbela.v1.PhotoService.AddPhotoToAlbum.
+func (c *photoServiceClient) AddPhotoToAlbum(ctx context.Context, req *connect.Request[pb.AddPhotoToAlbumRequest]) (*connect.Response[pb.AddPhotoToAlbumResponse], error) {
+	return c.addPhotoToAlbum.CallUnary(ctx, req)
+}
+
+// ListPeople calls umbela.v1.PhotoService.ListPeople.
+func (c *photoServiceClient) ListPeople(ctx context.Context, req *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error) {
+	return c.listPeople.CallUnary(ctx, req)
+}
+
+// LabelPerson calls umbela.v1.PhotoService.LabelPerson.
+func (c *photoServiceClient) LabelPerson(ctx context.Context, req *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error) {
+	return c.labelPerson.CallUnary(ctx, req)
+}
+
+// GetPersonDetails calls umbela.v1.PhotoService.GetPersonDetails.
+func (c *photoServiceClient) GetPersonDetails(ctx context.Context, req *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error) {
+	return c.getPersonDetails.CallUnary(ctx, req)
+}
+
+// ListAlbums calls umbela.v1.PhotoService.ListAlbums.
+func (c *photoServiceClient) ListAlbums(ctx context.Context, req *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {
+	return c.listAlbums.CallUnary(ctx, req)
+}
+
+// CreateAlbum calls umbela.v1.PhotoService.CreateAlbum.
+func (c *photoServiceClient) CreateAlbum(ctx context.Context, req *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error) {
+	return c.createAlbum.CallUnary(ctx, req)
+}
+
+// ListPlaces calls umbela.v1.PhotoService.ListPlaces.
+func (c *photoServiceClient) ListPlaces(ctx context.Context, req *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error) {
+	return c.listPlaces.CallUnary(ctx, req)
 }
 
 // PhotoServiceHandler is an implementation of the umbela.v1.PhotoService service.
 type PhotoServiceHandler interface {
-	GetTimeline(context.Context, *pb.GetTimelineRequest) (*pb.GetTimelineResponse, error)
-	StreamThumbnail(context.Context, *pb.GetThumbnailRequest, PhotoServiceStreamThumbnailServerStream) error
-	StreamFullImage(context.Context, *pb.GetFullImageRequest, PhotoServiceStreamFullImageServerStream) error
-	GetPhotoDetails(context.Context, *pb.GetPhotoDetailsRequest) (*pb.GetPhotoDetailsResponse, error)
+	GetTimeline(context.Context, *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error)
+	// Photo count per month, newest first. Tiny; lets the client lay out the
+	// whole timeline and jump anywhere before loading a single photo.
+	GetTimelineBuckets(context.Context, *connect.Request[pb.GetTimelineBucketsRequest]) (*connect.Response[pb.GetTimelineBucketsResponse], error)
+	StreamThumbnail(context.Context, *connect.Request[pb.GetThumbnailRequest], *connect.ServerStream[pb.Chunk]) error
+	StreamFullImage(context.Context, *connect.Request[pb.GetFullImageRequest], *connect.ServerStream[pb.Chunk]) error
+	GetPhotoDetails(context.Context, *connect.Request[pb.GetPhotoDetailsRequest]) (*connect.Response[pb.GetPhotoDetailsResponse], error)
 	// Acciones sobre fotos (Pantalla 7 - Visor)
-	ToggleFavorite(context.Context, *pb.ToggleFavoriteRequest) (*pb.ToggleFavoriteResponse, error)
-	DeletePhoto(context.Context, *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error)
-	AddPhotoToAlbum(context.Context, *pb.AddPhotoToAlbumRequest) (*pb.AddPhotoToAlbumResponse, error)
-	ListPeople(context.Context, *pb.ListPeopleRequest) (*pb.ListPeopleResponse, error)
-	LabelPerson(context.Context, *pb.LabelPersonRequest) (*pb.LabelPersonResponse, error)
-	GetPersonDetails(context.Context, *pb.GetPersonDetailsRequest) (*pb.GetPersonDetailsResponse, error)
-	ListAlbums(context.Context, *pb.ListAlbumsRequest) (*pb.ListAlbumsResponse, error)
-	CreateAlbum(context.Context, *pb.CreateAlbumRequest) (*pb.CreateAlbumResponse, error)
-	ListPlaces(context.Context, *pb.ListPlacesRequest) (*pb.ListPlacesResponse, error)
+	ToggleFavorite(context.Context, *connect.Request[pb.ToggleFavoriteRequest]) (*connect.Response[pb.ToggleFavoriteResponse], error)
+	DeletePhoto(context.Context, *connect.Request[pb.DeletePhotoRequest]) (*connect.Response[pb.DeletePhotoResponse], error)
+	AddPhotoToAlbum(context.Context, *connect.Request[pb.AddPhotoToAlbumRequest]) (*connect.Response[pb.AddPhotoToAlbumResponse], error)
+	ListPeople(context.Context, *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error)
+	LabelPerson(context.Context, *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error)
+	GetPersonDetails(context.Context, *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error)
+	ListAlbums(context.Context, *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error)
+	CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error)
+	ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error)
 }
 
-// RegisterPhotoServiceHandler registers svc as the umbela.v1.PhotoService implementation on server.
-func RegisterPhotoServiceHandler(server *connect.Server, svc PhotoServiceHandler) {
-	adapter := photoServiceHandler{svc: svc}
-	server.Register(
-		connect.Method{Spec: photoServiceGetTimelineSpec(), Handler: adapter.getTimeline},
-		connect.Method{Spec: photoServiceStreamThumbnailSpec(), Handler: adapter.streamThumbnail},
-		connect.Method{Spec: photoServiceStreamFullImageSpec(), Handler: adapter.streamFullImage},
-		connect.Method{Spec: photoServiceGetPhotoDetailsSpec(), Handler: adapter.getPhotoDetails},
-		connect.Method{Spec: photoServiceToggleFavoriteSpec(), Handler: adapter.toggleFavorite},
-		connect.Method{Spec: photoServiceDeletePhotoSpec(), Handler: adapter.deletePhoto},
-		connect.Method{Spec: photoServiceAddPhotoToAlbumSpec(), Handler: adapter.addPhotoToAlbum},
-		connect.Method{Spec: photoServiceListPeopleSpec(), Handler: adapter.listPeople},
-		connect.Method{Spec: photoServiceLabelPersonSpec(), Handler: adapter.labelPerson},
-		connect.Method{Spec: photoServiceGetPersonDetailsSpec(), Handler: adapter.getPersonDetails},
-		connect.Method{Spec: photoServiceListAlbumsSpec(), Handler: adapter.listAlbums},
-		connect.Method{Spec: photoServiceCreateAlbumSpec(), Handler: adapter.createAlbum},
-		connect.Method{Spec: photoServiceListPlacesSpec(), Handler: adapter.listPlaces},
+// NewPhotoServiceHandler builds an HTTP handler from the service implementation. It returns the
+// path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewPhotoServiceHandler(svc PhotoServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	photoServiceGetTimelineHandler := connect.NewUnaryHandler(
+		PhotoServiceGetTimelineProcedure,
+		svc.GetTimeline,
+		connect.WithSchema(photoServiceGetTimelineMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
-}
-
-// PhotoServiceStreamThumbnailServerStream is the server stream for the PhotoService's
-// StreamThumbnail RPC.
-type PhotoServiceStreamThumbnailServerStream struct {
-	stream connect.ServerStream
-}
-
-// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
-func (s PhotoServiceStreamThumbnailServerStream) SendHeaders() error {
-	return s.stream.SendHeaders()
-}
-
-// Send sends a response message to the client.
-func (s PhotoServiceStreamThumbnailServerStream) Send(res *pb.Chunk) error {
-	return s.stream.Send(res)
-}
-
-// PhotoServiceStreamFullImageServerStream is the server stream for the PhotoService's
-// StreamFullImage RPC.
-type PhotoServiceStreamFullImageServerStream struct {
-	stream connect.ServerStream
-}
-
-// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
-func (s PhotoServiceStreamFullImageServerStream) SendHeaders() error {
-	return s.stream.SendHeaders()
-}
-
-// Send sends a response message to the client.
-func (s PhotoServiceStreamFullImageServerStream) Send(res *pb.Chunk) error {
-	return s.stream.Send(res)
+	photoServiceGetTimelineBucketsHandler := connect.NewUnaryHandler(
+		PhotoServiceGetTimelineBucketsProcedure,
+		svc.GetTimelineBuckets,
+		connect.WithSchema(photoServiceGetTimelineBucketsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceStreamThumbnailHandler := connect.NewServerStreamHandler(
+		PhotoServiceStreamThumbnailProcedure,
+		svc.StreamThumbnail,
+		connect.WithSchema(photoServiceStreamThumbnailMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceStreamFullImageHandler := connect.NewServerStreamHandler(
+		PhotoServiceStreamFullImageProcedure,
+		svc.StreamFullImage,
+		connect.WithSchema(photoServiceStreamFullImageMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceGetPhotoDetailsHandler := connect.NewUnaryHandler(
+		PhotoServiceGetPhotoDetailsProcedure,
+		svc.GetPhotoDetails,
+		connect.WithSchema(photoServiceGetPhotoDetailsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceToggleFavoriteHandler := connect.NewUnaryHandler(
+		PhotoServiceToggleFavoriteProcedure,
+		svc.ToggleFavorite,
+		connect.WithSchema(photoServiceToggleFavoriteMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceDeletePhotoHandler := connect.NewUnaryHandler(
+		PhotoServiceDeletePhotoProcedure,
+		svc.DeletePhoto,
+		connect.WithSchema(photoServiceDeletePhotoMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceAddPhotoToAlbumHandler := connect.NewUnaryHandler(
+		PhotoServiceAddPhotoToAlbumProcedure,
+		svc.AddPhotoToAlbum,
+		connect.WithSchema(photoServiceAddPhotoToAlbumMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceListPeopleHandler := connect.NewUnaryHandler(
+		PhotoServiceListPeopleProcedure,
+		svc.ListPeople,
+		connect.WithSchema(photoServiceListPeopleMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceLabelPersonHandler := connect.NewUnaryHandler(
+		PhotoServiceLabelPersonProcedure,
+		svc.LabelPerson,
+		connect.WithSchema(photoServiceLabelPersonMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceGetPersonDetailsHandler := connect.NewUnaryHandler(
+		PhotoServiceGetPersonDetailsProcedure,
+		svc.GetPersonDetails,
+		connect.WithSchema(photoServiceGetPersonDetailsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceListAlbumsHandler := connect.NewUnaryHandler(
+		PhotoServiceListAlbumsProcedure,
+		svc.ListAlbums,
+		connect.WithSchema(photoServiceListAlbumsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceCreateAlbumHandler := connect.NewUnaryHandler(
+		PhotoServiceCreateAlbumProcedure,
+		svc.CreateAlbum,
+		connect.WithSchema(photoServiceCreateAlbumMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceListPlacesHandler := connect.NewUnaryHandler(
+		PhotoServiceListPlacesProcedure,
+		svc.ListPlaces,
+		connect.WithSchema(photoServiceListPlacesMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/umbela.v1.PhotoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case PhotoServiceGetTimelineProcedure:
+			photoServiceGetTimelineHandler.ServeHTTP(w, r)
+		case PhotoServiceGetTimelineBucketsProcedure:
+			photoServiceGetTimelineBucketsHandler.ServeHTTP(w, r)
+		case PhotoServiceStreamThumbnailProcedure:
+			photoServiceStreamThumbnailHandler.ServeHTTP(w, r)
+		case PhotoServiceStreamFullImageProcedure:
+			photoServiceStreamFullImageHandler.ServeHTTP(w, r)
+		case PhotoServiceGetPhotoDetailsProcedure:
+			photoServiceGetPhotoDetailsHandler.ServeHTTP(w, r)
+		case PhotoServiceToggleFavoriteProcedure:
+			photoServiceToggleFavoriteHandler.ServeHTTP(w, r)
+		case PhotoServiceDeletePhotoProcedure:
+			photoServiceDeletePhotoHandler.ServeHTTP(w, r)
+		case PhotoServiceAddPhotoToAlbumProcedure:
+			photoServiceAddPhotoToAlbumHandler.ServeHTTP(w, r)
+		case PhotoServiceListPeopleProcedure:
+			photoServiceListPeopleHandler.ServeHTTP(w, r)
+		case PhotoServiceLabelPersonProcedure:
+			photoServiceLabelPersonHandler.ServeHTTP(w, r)
+		case PhotoServiceGetPersonDetailsProcedure:
+			photoServiceGetPersonDetailsHandler.ServeHTTP(w, r)
+		case PhotoServiceListAlbumsProcedure:
+			photoServiceListAlbumsHandler.ServeHTTP(w, r)
+		case PhotoServiceCreateAlbumProcedure:
+			photoServiceCreateAlbumHandler.ServeHTTP(w, r)
+		case PhotoServiceListPlacesProcedure:
+			photoServiceListPlacesHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedPhotoServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedPhotoServiceHandler struct{}
 
-func (UnimplementedPhotoServiceHandler) GetTimeline(context.Context, *pb.GetTimelineRequest) (*pb.GetTimelineResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.GetTimeline is not implemented")
+func (UnimplementedPhotoServiceHandler) GetTimeline(context.Context, *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.GetTimeline is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) StreamThumbnail(context.Context, *pb.GetThumbnailRequest, PhotoServiceStreamThumbnailServerStream) error {
-	return connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.StreamThumbnail is not implemented")
+func (UnimplementedPhotoServiceHandler) GetTimelineBuckets(context.Context, *connect.Request[pb.GetTimelineBucketsRequest]) (*connect.Response[pb.GetTimelineBucketsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.GetTimelineBuckets is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) StreamFullImage(context.Context, *pb.GetFullImageRequest, PhotoServiceStreamFullImageServerStream) error {
-	return connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.StreamFullImage is not implemented")
+func (UnimplementedPhotoServiceHandler) StreamThumbnail(context.Context, *connect.Request[pb.GetThumbnailRequest], *connect.ServerStream[pb.Chunk]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.StreamThumbnail is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) GetPhotoDetails(context.Context, *pb.GetPhotoDetailsRequest) (*pb.GetPhotoDetailsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.GetPhotoDetails is not implemented")
+func (UnimplementedPhotoServiceHandler) StreamFullImage(context.Context, *connect.Request[pb.GetFullImageRequest], *connect.ServerStream[pb.Chunk]) error {
+	return connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.StreamFullImage is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) ToggleFavorite(context.Context, *pb.ToggleFavoriteRequest) (*pb.ToggleFavoriteResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.ToggleFavorite is not implemented")
+func (UnimplementedPhotoServiceHandler) GetPhotoDetails(context.Context, *connect.Request[pb.GetPhotoDetailsRequest]) (*connect.Response[pb.GetPhotoDetailsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.GetPhotoDetails is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) DeletePhoto(context.Context, *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.DeletePhoto is not implemented")
+func (UnimplementedPhotoServiceHandler) ToggleFavorite(context.Context, *connect.Request[pb.ToggleFavoriteRequest]) (*connect.Response[pb.ToggleFavoriteResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.ToggleFavorite is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) AddPhotoToAlbum(context.Context, *pb.AddPhotoToAlbumRequest) (*pb.AddPhotoToAlbumResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.AddPhotoToAlbum is not implemented")
+func (UnimplementedPhotoServiceHandler) DeletePhoto(context.Context, *connect.Request[pb.DeletePhotoRequest]) (*connect.Response[pb.DeletePhotoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.DeletePhoto is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) ListPeople(context.Context, *pb.ListPeopleRequest) (*pb.ListPeopleResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.ListPeople is not implemented")
+func (UnimplementedPhotoServiceHandler) AddPhotoToAlbum(context.Context, *connect.Request[pb.AddPhotoToAlbumRequest]) (*connect.Response[pb.AddPhotoToAlbumResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.AddPhotoToAlbum is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) LabelPerson(context.Context, *pb.LabelPersonRequest) (*pb.LabelPersonResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.LabelPerson is not implemented")
+func (UnimplementedPhotoServiceHandler) ListPeople(context.Context, *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.ListPeople is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) GetPersonDetails(context.Context, *pb.GetPersonDetailsRequest) (*pb.GetPersonDetailsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.GetPersonDetails is not implemented")
+func (UnimplementedPhotoServiceHandler) LabelPerson(context.Context, *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.LabelPerson is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) ListAlbums(context.Context, *pb.ListAlbumsRequest) (*pb.ListAlbumsResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.ListAlbums is not implemented")
+func (UnimplementedPhotoServiceHandler) GetPersonDetails(context.Context, *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.GetPersonDetails is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) CreateAlbum(context.Context, *pb.CreateAlbumRequest) (*pb.CreateAlbumResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.CreateAlbum is not implemented")
+func (UnimplementedPhotoServiceHandler) ListAlbums(context.Context, *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.ListAlbums is not implemented"))
 }
 
-func (UnimplementedPhotoServiceHandler) ListPlaces(context.Context, *pb.ListPlacesRequest) (*pb.ListPlacesResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.PhotoService.ListPlaces is not implemented")
+func (UnimplementedPhotoServiceHandler) CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.CreateAlbum is not implemented"))
 }
 
-type photoServiceClient struct {
-	client *connect.Client
-}
-
-func (c *photoServiceClient) GetTimeline(ctx context.Context, req *pb.GetTimelineRequest) (*pb.GetTimelineResponse, error) {
-	var res pb.GetTimelineResponse
-	if err := c.client.CallUnary(ctx, photoServiceGetTimelineSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) StreamThumbnail(ctx context.Context, req *pb.GetThumbnailRequest) (PhotoServiceStreamThumbnailClientStream, error) {
-	stream, err := c.client.CallServerStream(ctx, photoServiceStreamThumbnailSpec(), req)
-	if err != nil {
-		return PhotoServiceStreamThumbnailClientStream{}, err
-	}
-	return PhotoServiceStreamThumbnailClientStream{stream: stream}, nil
-}
-
-func (c *photoServiceClient) StreamFullImage(ctx context.Context, req *pb.GetFullImageRequest) (PhotoServiceStreamFullImageClientStream, error) {
-	stream, err := c.client.CallServerStream(ctx, photoServiceStreamFullImageSpec(), req)
-	if err != nil {
-		return PhotoServiceStreamFullImageClientStream{}, err
-	}
-	return PhotoServiceStreamFullImageClientStream{stream: stream}, nil
-}
-
-func (c *photoServiceClient) GetPhotoDetails(ctx context.Context, req *pb.GetPhotoDetailsRequest) (*pb.GetPhotoDetailsResponse, error) {
-	var res pb.GetPhotoDetailsResponse
-	if err := c.client.CallUnary(ctx, photoServiceGetPhotoDetailsSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) ToggleFavorite(ctx context.Context, req *pb.ToggleFavoriteRequest) (*pb.ToggleFavoriteResponse, error) {
-	var res pb.ToggleFavoriteResponse
-	if err := c.client.CallUnary(ctx, photoServiceToggleFavoriteSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) DeletePhoto(ctx context.Context, req *pb.DeletePhotoRequest) (*pb.DeletePhotoResponse, error) {
-	var res pb.DeletePhotoResponse
-	if err := c.client.CallUnary(ctx, photoServiceDeletePhotoSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) AddPhotoToAlbum(ctx context.Context, req *pb.AddPhotoToAlbumRequest) (*pb.AddPhotoToAlbumResponse, error) {
-	var res pb.AddPhotoToAlbumResponse
-	if err := c.client.CallUnary(ctx, photoServiceAddPhotoToAlbumSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) ListPeople(ctx context.Context, req *pb.ListPeopleRequest) (*pb.ListPeopleResponse, error) {
-	var res pb.ListPeopleResponse
-	if err := c.client.CallUnary(ctx, photoServiceListPeopleSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) LabelPerson(ctx context.Context, req *pb.LabelPersonRequest) (*pb.LabelPersonResponse, error) {
-	var res pb.LabelPersonResponse
-	if err := c.client.CallUnary(ctx, photoServiceLabelPersonSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) GetPersonDetails(ctx context.Context, req *pb.GetPersonDetailsRequest) (*pb.GetPersonDetailsResponse, error) {
-	var res pb.GetPersonDetailsResponse
-	if err := c.client.CallUnary(ctx, photoServiceGetPersonDetailsSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) ListAlbums(ctx context.Context, req *pb.ListAlbumsRequest) (*pb.ListAlbumsResponse, error) {
-	var res pb.ListAlbumsResponse
-	if err := c.client.CallUnary(ctx, photoServiceListAlbumsSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) CreateAlbum(ctx context.Context, req *pb.CreateAlbumRequest) (*pb.CreateAlbumResponse, error) {
-	var res pb.CreateAlbumResponse
-	if err := c.client.CallUnary(ctx, photoServiceCreateAlbumSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *photoServiceClient) ListPlaces(ctx context.Context, req *pb.ListPlacesRequest) (*pb.ListPlacesResponse, error) {
-	var res pb.ListPlacesResponse
-	if err := c.client.CallUnary(ctx, photoServiceListPlacesSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-type photoServiceHandler struct{ svc PhotoServiceHandler }
-
-func (h photoServiceHandler) getTimeline(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.GetTimelineRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.GetTimeline(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) streamThumbnail(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.GetThumbnailRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	return h.svc.StreamThumbnail(ctx, &req, PhotoServiceStreamThumbnailServerStream{stream: stream})
-}
-
-func (h photoServiceHandler) streamFullImage(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.GetFullImageRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	return h.svc.StreamFullImage(ctx, &req, PhotoServiceStreamFullImageServerStream{stream: stream})
-}
-
-func (h photoServiceHandler) getPhotoDetails(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.GetPhotoDetailsRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.GetPhotoDetails(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) toggleFavorite(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.ToggleFavoriteRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.ToggleFavorite(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) deletePhoto(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.DeletePhotoRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.DeletePhoto(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) addPhotoToAlbum(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.AddPhotoToAlbumRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.AddPhotoToAlbum(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) listPeople(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.ListPeopleRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.ListPeople(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) labelPerson(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.LabelPersonRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.LabelPerson(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) getPersonDetails(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.GetPersonDetailsRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.GetPersonDetails(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) listAlbums(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.ListAlbumsRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.ListAlbums(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) createAlbum(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.CreateAlbumRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.CreateAlbum(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h photoServiceHandler) listPlaces(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.ListPlacesRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.ListPlaces(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
+func (UnimplementedPhotoServiceHandler) ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.ListPlaces is not implemented"))
 }

@@ -106,5 +106,14 @@ func runMigrations(db *bun.DB) error {
 		}
 	}
 
+	// The timeline pages by (captured_at, id) and the month buckets scan
+	// captured_at; this index serves both.
+	if _, err := db.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_photos_captured_at_id ON photos (captured_at DESC, id DESC)`,
+	); err != nil {
+		return fmt.Errorf("creando índice del timeline: %w", err)
+	}
+
 	return nil
 }
+

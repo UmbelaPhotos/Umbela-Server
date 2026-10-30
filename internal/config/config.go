@@ -14,6 +14,7 @@ type Config struct {
 
 type ServerConfig struct {
 	APIPort    int    `json:"api_port"`
+	TorPort	   int	  `json:"tor_port"`
 	TorEnabled bool   `json:"tor_enabled"`
 	OneHopTor  bool   `json:"one_hop_enabled"`
 	TorEd25519 []byte `json:"tor_ed25519,omitempty"`
@@ -58,6 +59,7 @@ func DefaultConfig(userPath string) (*Config, error) {
 		},
 		Server: ServerConfig{
 			APIPort:     41110,
+			TorPort: 	 41111,
 			TorEnabled:  true,
 			OneHopTor:   true,
 			TorEd25519:  nil,

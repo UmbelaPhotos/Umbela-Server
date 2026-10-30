@@ -4,7 +4,7 @@ plugins:
     out: .
     opt:
       - module=umbela-server
-  - plugin: buf.build/connectrpc/go
+  - plugin: buf.build/connectrpc/go:v1.16.2 # <--- AGREGAR :v1.16.2 AQUÍ
     out: .
     opt:
       - module=umbela-server

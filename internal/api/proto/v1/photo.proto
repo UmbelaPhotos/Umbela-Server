@@ -5,6 +5,9 @@ option go_package = "umbela-server/internal/api/pb";
 
 service PhotoService {
   rpc GetTimeline(GetTimelineRequest) returns (GetTimelineResponse);
+  // Photo count per month, newest first. Tiny; lets the client lay out the
+  // whole timeline and jump anywhere before loading a single photo.
+  rpc GetTimelineBuckets(GetTimelineBucketsRequest) returns (GetTimelineBucketsResponse);
   rpc StreamThumbnail(GetThumbnailRequest) returns (stream Chunk);
   rpc StreamFullImage(GetFullImageRequest) returns (stream Chunk);
   rpc GetPhotoDetails(GetPhotoDetailsRequest) returns (GetPhotoDetailsResponse);
@@ -35,6 +38,7 @@ message PhotoSummary {
   string blurhash = 4;
   int32 width = 5;
   int32 height = 6;
+  bool favorite = 7;
 }
 
 message GetTimelineRequest {
@@ -43,9 +47,33 @@ message GetTimelineRequest {
   string person_id = 3;
   string album_id = 4;
   string place_id = 5;
+  // Max photos per page; 0 means the server default. The server caps it.
+  int32 page_size = 6;
+  // Opaque; empty for the first page, else the previous next_cursor.
+  string cursor = 7;
 }
 message GetTimelineResponse {
+  // Newest first, ties broken by id, so pages never skip or repeat a photo.
   repeated PhotoSummary photos = 1;
+  // Empty when there are no more photos in the requested range.
+  string next_cursor = 2;
+}
+
+message GetTimelineBucketsRequest {
+  // Viewer's UTC offset, so a photo taken at 23:30 local lands in its local
+  // month.
+  int32 tz_offset_seconds = 1;
+}
+message TimelineBucket {
+  int32 year = 1;
+  int32 month = 2; // 1..12
+  int32 count = 3;
+  // Inclusive range to pass as from_unix / to_unix to GetTimeline.
+  int64 from_unix = 4;
+  int64 to_unix = 5;
+}
+message GetTimelineBucketsResponse {
+  repeated TimelineBucket buckets = 1;
 }
 
 message GetThumbnailRequest {

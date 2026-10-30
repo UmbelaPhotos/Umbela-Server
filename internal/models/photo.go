@@ -14,6 +14,8 @@ type Photo struct {
 	Title       string    `bun:"title"`
 	Description string    `bun:"description"`
 	Artist      string    `bun:"artist"`
+	Width		int		  `bun:"width"`
+	Height		int		  `bun:"Height"`
 	CapturedAt  int64     `bun:"captured_at"`
 	Latitude    float64   `bun:"latitude"`
 	Longitude   float64   `bun:"longitude"`
@@ -21,6 +23,7 @@ type Photo struct {
 	ThumbPath   string    `bun:"thumb_path"`
 	Blurhash    string    `bun:"blurhash"`
 	CreatedAt   time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
+	Favorite	bool	  `bun:"favorite,default:false"`
 
 	Faces []*Face `bun:"m2m:photo_faces,join:Photo=Face"`
 }

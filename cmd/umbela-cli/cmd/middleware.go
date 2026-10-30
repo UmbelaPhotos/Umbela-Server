@@ -5,9 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
+	"umbela-server/internal/config"
 	"umbela-server/internal/crypto"
-	"umbela-server/internal/db"
 	"umbela-server/internal/vault"
 
 	"github.com/spf13/cobra"
@@ -51,15 +50,14 @@ func RequireAuth(next CommandRun) CommandRun {
 		}
 
 		KEK := crypto.DeriveKEK(passwordBytes, userSalt)
-		dbPath := filepath.Join(userFolder, "database.db")
 
 		// Check password
-		err = db.TestUnlock(dbPath, KEK)
-		if errors.Is(err, db.ErrInvalidDatabasePassword) {
-			return ErrUserOrPasswordIncorrect
-		} else if err != nil {
+		_,err = config.Read(userFolder, KEK)
+		if err!=nil{
 			return err
 		}
+
+		fmt.Println("Logged in")
 
 		ctx := cmd.Context()
 		ctx = context.WithValue(ctx, CtxKeyKEK, KEK)

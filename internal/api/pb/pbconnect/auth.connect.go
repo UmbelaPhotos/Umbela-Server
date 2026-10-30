@@ -5,208 +5,203 @@
 package pbconnect
 
 import (
-	connect "connectrpc.com/connect/v2"
+	connect "connectrpc.com/connect"
 	context "context"
-	sync "sync"
+	errors "errors"
+	http "net/http"
+	strings "strings"
 	pb "umbela-server/internal/api/pb"
 )
+
+// This is a compile-time assertion to ensure that this generated file and the connect package are
+// compatible. If you get a compiler error that this constant is not defined, this code was
+// generated with a version of connect newer than the one compiled into your binary. You can fix the
+// problem by either regenerating this code with an older version of connect or updating the connect
+// version compiled into your binary.
+const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// AuthServiceName is the fully-qualified name of the AuthService service.
 	AuthServiceName = "umbela.v1.AuthService"
 )
 
-// These constants are the procedure names of the RPCs defined in this package. They're exposed at
-// runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the fully-qualified names of the RPCs defined in this package. They're
+// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// AuthServiceIdentifyProcedure is the procedure name of the AuthService's Identify RPC.
+	// AuthServiceIdentifyProcedure is the fully-qualified name of the AuthService's Identify RPC.
 	AuthServiceIdentifyProcedure = "/umbela.v1.AuthService/Identify"
-	// AuthServiceUnlockProcedure is the procedure name of the AuthService's Unlock RPC.
+	// AuthServiceUnlockProcedure is the fully-qualified name of the AuthService's Unlock RPC.
 	AuthServiceUnlockProcedure = "/umbela.v1.AuthService/Unlock"
-	// AuthServiceGetStatusProcedure is the procedure name of the AuthService's GetStatus RPC.
+	// AuthServiceGetStatusProcedure is the fully-qualified name of the AuthService's GetStatus RPC.
 	AuthServiceGetStatusProcedure = "/umbela.v1.AuthService/GetStatus"
-	// AuthServiceLockProcedure is the procedure name of the AuthService's Lock RPC.
+	// AuthServiceLockProcedure is the fully-qualified name of the AuthService's Lock RPC.
 	AuthServiceLockProcedure = "/umbela.v1.AuthService/Lock"
 )
 
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	authServiceIdentifySpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("Identify"),
-			Procedure:  AuthServiceIdentifyProcedure,
-		}
-	})
-	authServiceUnlockSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("Unlock"),
-			Procedure:  AuthServiceUnlockProcedure,
-		}
-	})
-	authServiceGetStatusSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("GetStatus"),
-			Procedure:  AuthServiceGetStatusProcedure,
-		}
-	})
-	authServiceLockSpec = sync.OnceValue(func() connect.Spec {
-		return connect.Spec{
-			StreamType: connect.StreamTypeUnary,
-			Schema:     pb.File_internal_api_proto_v1_auth_proto.Services().ByName("AuthService").Methods().ByName("Lock"),
-			Procedure:  AuthServiceLockProcedure,
-		}
-	})
+	authServiceServiceDescriptor         = pb.File_internal_api_proto_v1_auth_proto.Services().ByName("AuthService")
+	authServiceIdentifyMethodDescriptor  = authServiceServiceDescriptor.Methods().ByName("Identify")
+	authServiceUnlockMethodDescriptor    = authServiceServiceDescriptor.Methods().ByName("Unlock")
+	authServiceGetStatusMethodDescriptor = authServiceServiceDescriptor.Methods().ByName("GetStatus")
+	authServiceLockMethodDescriptor      = authServiceServiceDescriptor.Methods().ByName("Lock")
 )
 
 // AuthServiceClient is a client for the umbela.v1.AuthService service.
 type AuthServiceClient interface {
 	// Prueba la posesión de la clave Ed25519 del servidor (QR)[cite: 11]
-	Identify(context.Context, *pb.IdentifyRequest) (*pb.IdentifyResponse, error)
+	Identify(context.Context, *connect.Request[pb.IdentifyRequest]) (*connect.Response[pb.IdentifyResponse], error)
 	// Entrega la KEK, desbloquea la RAM y genera el token de sesión[cite: 11]
-	Unlock(context.Context, *pb.UnlockRequest) (*pb.UnlockResponse, error)
+	Unlock(context.Context, *connect.Request[pb.UnlockRequest]) (*connect.Response[pb.UnlockResponse], error)
 	// Consulta el estado del Vault y la expiración del token
-	GetStatus(context.Context, *pb.GetStatusRequest) (*pb.GetStatusResponse, error)
+	GetStatus(context.Context, *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error)
 	// Fuerza el bloqueo inmediato del Vault y destruye tokens en RAM
-	Lock(context.Context, *pb.LockRequest) (*pb.LockResponse, error)
+	Lock(context.Context, *connect.Request[pb.LockRequest]) (*connect.Response[pb.LockResponse], error)
 }
 
-// NewAuthServiceClient constructs a client for the umbela.v1.AuthService service. Multiple service
-// clients may share a single connect.Client.
-func NewAuthServiceClient(client *connect.Client) AuthServiceClient {
-	return &authServiceClient{client: client}
+// NewAuthServiceClient constructs a client for the umbela.v1.AuthService service. By default, it
+// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
+// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
+// connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) AuthServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	return &authServiceClient{
+		identify: connect.NewClient[pb.IdentifyRequest, pb.IdentifyResponse](
+			httpClient,
+			baseURL+AuthServiceIdentifyProcedure,
+			connect.WithSchema(authServiceIdentifyMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		unlock: connect.NewClient[pb.UnlockRequest, pb.UnlockResponse](
+			httpClient,
+			baseURL+AuthServiceUnlockProcedure,
+			connect.WithSchema(authServiceUnlockMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getStatus: connect.NewClient[pb.GetStatusRequest, pb.GetStatusResponse](
+			httpClient,
+			baseURL+AuthServiceGetStatusProcedure,
+			connect.WithSchema(authServiceGetStatusMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		lock: connect.NewClient[pb.LockRequest, pb.LockResponse](
+			httpClient,
+			baseURL+AuthServiceLockProcedure,
+			connect.WithSchema(authServiceLockMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// authServiceClient implements AuthServiceClient.
+type authServiceClient struct {
+	identify  *connect.Client[pb.IdentifyRequest, pb.IdentifyResponse]
+	unlock    *connect.Client[pb.UnlockRequest, pb.UnlockResponse]
+	getStatus *connect.Client[pb.GetStatusRequest, pb.GetStatusResponse]
+	lock      *connect.Client[pb.LockRequest, pb.LockResponse]
+}
+
+// Identify calls umbela.v1.AuthService.Identify.
+func (c *authServiceClient) Identify(ctx context.Context, req *connect.Request[pb.IdentifyRequest]) (*connect.Response[pb.IdentifyResponse], error) {
+	return c.identify.CallUnary(ctx, req)
+}
+
+// Unlock calls umbela.v1.AuthService.Unlock.
+func (c *authServiceClient) Unlock(ctx context.Context, req *connect.Request[pb.UnlockRequest]) (*connect.Response[pb.UnlockResponse], error) {
+	return c.unlock.CallUnary(ctx, req)
+}
+
+// GetStatus calls umbela.v1.AuthService.GetStatus.
+func (c *authServiceClient) GetStatus(ctx context.Context, req *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error) {
+	return c.getStatus.CallUnary(ctx, req)
+}
+
+// Lock calls umbela.v1.AuthService.Lock.
+func (c *authServiceClient) Lock(ctx context.Context, req *connect.Request[pb.LockRequest]) (*connect.Response[pb.LockResponse], error) {
+	return c.lock.CallUnary(ctx, req)
 }
 
 // AuthServiceHandler is an implementation of the umbela.v1.AuthService service.
 type AuthServiceHandler interface {
 	// Prueba la posesión de la clave Ed25519 del servidor (QR)[cite: 11]
-	Identify(context.Context, *pb.IdentifyRequest) (*pb.IdentifyResponse, error)
+	Identify(context.Context, *connect.Request[pb.IdentifyRequest]) (*connect.Response[pb.IdentifyResponse], error)
 	// Entrega la KEK, desbloquea la RAM y genera el token de sesión[cite: 11]
-	Unlock(context.Context, *pb.UnlockRequest) (*pb.UnlockResponse, error)
+	Unlock(context.Context, *connect.Request[pb.UnlockRequest]) (*connect.Response[pb.UnlockResponse], error)
 	// Consulta el estado del Vault y la expiración del token
-	GetStatus(context.Context, *pb.GetStatusRequest) (*pb.GetStatusResponse, error)
+	GetStatus(context.Context, *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error)
 	// Fuerza el bloqueo inmediato del Vault y destruye tokens en RAM
-	Lock(context.Context, *pb.LockRequest) (*pb.LockResponse, error)
+	Lock(context.Context, *connect.Request[pb.LockRequest]) (*connect.Response[pb.LockResponse], error)
 }
 
-// RegisterAuthServiceHandler registers svc as the umbela.v1.AuthService implementation on server.
-func RegisterAuthServiceHandler(server *connect.Server, svc AuthServiceHandler) {
-	adapter := authServiceHandler{svc: svc}
-	server.Register(
-		connect.Method{Spec: authServiceIdentifySpec(), Handler: adapter.identify},
-		connect.Method{Spec: authServiceUnlockSpec(), Handler: adapter.unlock},
-		connect.Method{Spec: authServiceGetStatusSpec(), Handler: adapter.getStatus},
-		connect.Method{Spec: authServiceLockSpec(), Handler: adapter.lock},
+// NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
+// on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	authServiceIdentifyHandler := connect.NewUnaryHandler(
+		AuthServiceIdentifyProcedure,
+		svc.Identify,
+		connect.WithSchema(authServiceIdentifyMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
 	)
+	authServiceUnlockHandler := connect.NewUnaryHandler(
+		AuthServiceUnlockProcedure,
+		svc.Unlock,
+		connect.WithSchema(authServiceUnlockMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceGetStatusHandler := connect.NewUnaryHandler(
+		AuthServiceGetStatusProcedure,
+		svc.GetStatus,
+		connect.WithSchema(authServiceGetStatusMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceLockHandler := connect.NewUnaryHandler(
+		AuthServiceLockProcedure,
+		svc.Lock,
+		connect.WithSchema(authServiceLockMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/umbela.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case AuthServiceIdentifyProcedure:
+			authServiceIdentifyHandler.ServeHTTP(w, r)
+		case AuthServiceUnlockProcedure:
+			authServiceUnlockHandler.ServeHTTP(w, r)
+		case AuthServiceGetStatusProcedure:
+			authServiceGetStatusHandler.ServeHTTP(w, r)
+		case AuthServiceLockProcedure:
+			authServiceLockHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
 }
 
 // UnimplementedAuthServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAuthServiceHandler struct{}
 
-func (UnimplementedAuthServiceHandler) Identify(context.Context, *pb.IdentifyRequest) (*pb.IdentifyResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.AuthService.Identify is not implemented")
+func (UnimplementedAuthServiceHandler) Identify(context.Context, *connect.Request[pb.IdentifyRequest]) (*connect.Response[pb.IdentifyResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.AuthService.Identify is not implemented"))
 }
 
-func (UnimplementedAuthServiceHandler) Unlock(context.Context, *pb.UnlockRequest) (*pb.UnlockResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.AuthService.Unlock is not implemented")
+func (UnimplementedAuthServiceHandler) Unlock(context.Context, *connect.Request[pb.UnlockRequest]) (*connect.Response[pb.UnlockResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.AuthService.Unlock is not implemented"))
 }
 
-func (UnimplementedAuthServiceHandler) GetStatus(context.Context, *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.AuthService.GetStatus is not implemented")
+func (UnimplementedAuthServiceHandler) GetStatus(context.Context, *connect.Request[pb.GetStatusRequest]) (*connect.Response[pb.GetStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.AuthService.GetStatus is not implemented"))
 }
 
-func (UnimplementedAuthServiceHandler) Lock(context.Context, *pb.LockRequest) (*pb.LockResponse, error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, "umbela.v1.AuthService.Lock is not implemented")
-}
-
-type authServiceClient struct {
-	client *connect.Client
-}
-
-func (c *authServiceClient) Identify(ctx context.Context, req *pb.IdentifyRequest) (*pb.IdentifyResponse, error) {
-	var res pb.IdentifyResponse
-	if err := c.client.CallUnary(ctx, authServiceIdentifySpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *authServiceClient) Unlock(ctx context.Context, req *pb.UnlockRequest) (*pb.UnlockResponse, error) {
-	var res pb.UnlockResponse
-	if err := c.client.CallUnary(ctx, authServiceUnlockSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *authServiceClient) GetStatus(ctx context.Context, req *pb.GetStatusRequest) (*pb.GetStatusResponse, error) {
-	var res pb.GetStatusResponse
-	if err := c.client.CallUnary(ctx, authServiceGetStatusSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-func (c *authServiceClient) Lock(ctx context.Context, req *pb.LockRequest) (*pb.LockResponse, error) {
-	var res pb.LockResponse
-	if err := c.client.CallUnary(ctx, authServiceLockSpec(), req, &res); err != nil {
-		return nil, err
-	}
-	return &res, nil
-}
-
-type authServiceHandler struct{ svc AuthServiceHandler }
-
-func (h authServiceHandler) identify(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.IdentifyRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.Identify(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h authServiceHandler) unlock(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.UnlockRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.Unlock(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h authServiceHandler) getStatus(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.GetStatusRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.GetStatus(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
-}
-
-func (h authServiceHandler) lock(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
-	var req pb.LockRequest
-	if err := stream.Receive(&req); err != nil {
-		return err
-	}
-	res, err := h.svc.Lock(ctx, &req)
-	if err != nil {
-		return err
-	}
-	return stream.Send(res)
+func (UnimplementedAuthServiceHandler) Lock(context.Context, *connect.Request[pb.LockRequest]) (*connect.Response[pb.LockResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.AuthService.Lock is not implemented"))
 }
