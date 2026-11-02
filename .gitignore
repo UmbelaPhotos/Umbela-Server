@@ -65,3 +65,4 @@ umbela-data/
 .umbela/
 
 tests/
+internal/vault/database_test.go
