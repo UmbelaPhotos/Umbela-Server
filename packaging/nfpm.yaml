@@ -5,8 +5,6 @@ maintainer: Juan <65680050+juanavelar87@users.noreply.github.com>
 description: Umbela server
 license: AGPL-3.0-only
 contents:
-  - src: dist/umbela-desktop
-    dst: /usr/bin/umbela-desktop
   - src: dist/umbela-cli
     dst: /usr/bin/umbela-cli
 overrides:
