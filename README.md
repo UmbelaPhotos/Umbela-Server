@@ -8,12 +8,12 @@
 
 A sovereign alternative to Google Photos and Apple Photos, where your memories, your metadata and your biometrics never leave your control.
 
-![Go](https://img.shields.io/badge/Go-static%20binary-00ADD8?logo=go&logoColor=white)
+![Go](https://img.shields.io/badge/Go-single%20binary-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?logo=sqlite&logoColor=white)
 ![Tor](https://img.shields.io/badge/Tor-Hidden%20Service%20v3-7D4698?logo=torproject&logoColor=white)
 ![Encryption](https://img.shields.io/badge/AES--256--GCM-Argon2id-success)
 ![Privacy](https://img.shields.io/badge/Privacy-First-blueviolet)
-![License](https://img.shields.io/badge/license-see%20LICENSE-blue)
+![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 </div>
 
@@ -33,15 +33,72 @@ No cloud. No open ports. No public DNS. No trust required in the host.
 |---|---|
 | **Zero-Knowledge at rest** | Config, session tokens and persistent internal state are stored encrypted. The server holds no keys until you provide your passphrase. |
 | **In-memory isolation** | Secrets (session keys, Ed25519 private keys, master keys) are never written to disk in plaintext. |
-| **Tor-native** | An embedded Tor daemon publishes a v3 Hidden Service automatically. Reachable only through Tor. |
+| **Tor-native** | Umbela launches and controls a Tor daemon that publishes a v3 Hidden Service automatically. Reachable only through Tor. |
 | **Private face recognition** | Face embeddings and person profiles live inside your encrypted vault, never in a third party's cloud. |
-| **Single static binary** | Written in Go with a minimal attack surface. Tor is embedded via `//go:embed`. |
+| **Single binary** | Written in Go with a minimal attack surface. It only needs libvips, OpenSSL and the `tor` executable, which the packages install for you. |
 | **Fast, reliable storage** | SQLite in WAL mode with Bun ORM, tuned for concurrent reads and atomic transactions. |
+
+## Installation
+
+Download the file for your system from the [**Releases**](../../releases) page. Pick `amd64` for regular PCs and Intel Macs, and `arm64` for Apple Silicon, Raspberry Pi 3/4/5 and other ARM 64-bit machines.
+
+### Linux
+
+The packages install the `umbela` command system-wide and pull in everything it needs (libvips, OpenSSL and Tor) automatically.
+
+| Distribution | File | Install |
+|---|---|---|
+| Debian, Ubuntu, Raspberry Pi OS (64-bit) | `.deb` | `sudo apt install ./umbela_*.deb` |
+| Fedora | `.rpm` | `sudo dnf install ./umbela-*.rpm` |
+| Arch Linux | `.pkg.tar.zst` | `sudo pacman -U ./umbela-*.pkg.tar.zst` |
+
+Use `apt install ./file.deb` rather than `dpkg -i`, which does not download dependencies.
+
+> **Raspberry Pi:** 64-bit Raspberry Pi OS is supported. The 32-bit (`armv7`) system is not.
+
+If you prefer the plain binary (`umbela-cli-linux-<arch>`), install libvips, OpenSSL and Tor (the `tor` package) with your package manager, then:
+
+```bash
+chmod +x umbela-cli-linux-amd64
+sudo mv umbela-cli-linux-amd64 /usr/local/bin/umbela
+```
+
+### macOS
+
+1. Install [Homebrew](https://brew.sh), the image library and Tor:
+
+   ```bash
+   brew install vips tor
+   ```
+
+2. Extract the archive and move the binary to your `PATH`:
+
+   ```bash
+   tar -xzf umbela-cli-darwin-arm64.tar.gz
+   sudo mv umbela /usr/local/bin/
+   ```
+
+3. The binary is not signed or notarized yet. If macOS blocks it after a browser download, remove the quarantine flag:
+
+   ```bash
+   xattr -d com.apple.quarantine /usr/local/bin/umbela
+   ```
+
+### Windows
+
+Not available yet.
+
+### Building from source
+
+You need Go (the version in `go.mod`), a C compiler, `pkg-config`, and the libvips and OpenSSL development packages (`libvips-dev libssl-dev` on Debian, `vips-devel openssl-devel` on Fedora, `libvips openssl` on Arch, `brew install vips pkgconf` on macOS).
+
+```bash
+CGO_ENABLED=1 go build -o umbela ./cmd/umbela-cli
+```
 
 ## Getting Started
 
-1. Go to the [**Releases**](../../releases) page of this repository and download the build for your operating system.
-2. Extract it and run the following commands from a terminal.
+After installing, run the following commands from a terminal.
 
 ### 1. Create your Vault
 
@@ -81,9 +138,10 @@ Pairs your phone with your Umbela server.
 umbela start <username> 
 ```
 
-Unlocks the Vault in RAM, starts the embedded Tor daemon and brings your private `.onion` service online.
+Unlocks the Vault in RAM, starts the Tor daemon and brings your private `.onion` service online.
 
-> **Note:** your passphrase is never stored. If you lose it, there is no recovery, and that is by design.
+> **Note:** the first start can take up to 10 minutes (usually 1-3, longer on slow connections or a Raspberry Pi). Your server must first connect to the Tor network, build its circuits and publish its `.onion` address. Until that finishes, your phone will not be able to connect. If pairing fails right after starting, wait a minute and try again.
+
 
 ## Architecture and Design Principles
 
@@ -248,7 +306,7 @@ Main commands:
 | **CLI framework** | [Cobra](https://github.com/spf13/cobra) |
 | **ORM** | [Bun](https://github.com/uptrace/bun) |
 | **Database** | SQLite3 (CGO/shim driver, WAL mode, `SQLiteSharedMemory`) |
-| **Networking and anonymization** | [Bine](https://github.com/cretz/bine) with an embedded Tor executable via `//go:embed` |
+| **Networking and anonymization** | [Bine](https://github.com/cretz/bine) driving the system `tor` executable |
 | **Cryptography** | [`golang.org/x/crypto`](https://pkg.go.dev/golang.org/x/crypto) (Argon2, AES-GCM, Ed25519) |
 
 ## Contributing
@@ -265,7 +323,7 @@ If you find a **security vulnerability**, please do not open a public issue. Rep
 
 ## License
 
-Distributed under the license found in the [LICENSE](LICENSE) file.
+Distributed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
 
 ---
 

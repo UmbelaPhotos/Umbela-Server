@@ -1,0 +1,55 @@
+name: windows-spike
+# Prueba manual: solo comprueba que el servidor compila y arranca en Windows.
+# No publica nada.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      CGO_ENABLED: "1"
+      CC: gcc
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-libvips
+            mingw-w64-ucrt-x86_64-openssl
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Entorno
+        run: |
+          go version
+          gcc --version | head -1
+          pkg-config --modversion vips
+          pkg-config --cflags --libs vips | head -c 400; echo
+
+      - name: Compilar
+        run: |
+          mkdir -p dist
+          go build -v -trimpath -ldflags "-s -w" -o dist/umbela.exe ./cmd/umbela-cli
+
+      - name: Arranca? (usa las DLL de MSYS2 del PATH)
+        run: ./dist/umbela.exe --help
+
+      - name: DLL que necesita fuera de Windows
+        run: ldd dist/umbela.exe | grep -v -i "/c/windows" | tee dist/dlls.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-spike
+          path: dist/*

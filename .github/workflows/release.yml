@@ -77,8 +77,8 @@ jobs:
       - name: Compilar
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w" -o umbela-cli ./cmd/umbela-cli
-          tar -czf dist/umbela-cli-darwin-${{ matrix.arch }}.tar.gz umbela-cli LICENSE
+          go build -trimpath -ldflags "-s -w" -o umbela ./cmd/umbela-cli
+          tar -czf dist/umbela-cli-darwin-${{ matrix.arch }}.tar.gz umbela LICENSE
 
       - uses: actions/upload-artifact@v4
         with:

@@ -6,11 +6,11 @@ description: Umbela server
 license: AGPL-3.0-only
 contents:
   - src: dist/umbela-cli
-    dst: /usr/bin/umbela-cli
+    dst: /usr/bin/umbela
 overrides:
   deb:
-    depends: [libvips42, libssl3]
+    depends: [libvips42, libssl3, tor]
   rpm:
-    depends: [vips, openssl-libs]
+    depends: [vips, openssl-libs, tor]
   archlinux:
-    depends: [libvips, openssl]
+    depends: [libvips, openssl, tor]
