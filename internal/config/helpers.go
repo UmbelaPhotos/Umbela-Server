@@ -3,17 +3,21 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
-func GetExecutableAndUmbelaPath()(string, string, error){
-	exePath, err := os.Executable()
-	if err != nil {
-		return "", "", fmt.Errorf("No executable dir: %w", err)
+func UmbelaDir() (string, error) {
+	if d := os.Getenv("UMBELA_HOME"); d != "" {
+		return d, nil
 	}
-	
-	exeDir:=filepath.Dir(exePath)
-	umbelaDirectory := filepath.Join(exeDir, ".umbela")
-
-	return exeDir, umbelaDirectory, nil 
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		u, uerr := user.Current()
+		if uerr != nil || u.HomeDir == "" {
+			return "", fmt.Errorf("cannot determine home dir: set UMBELA_HOME")
+		}
+		home = u.HomeDir
+	}
+	return filepath.Join(home, ".umbela"), nil
 }

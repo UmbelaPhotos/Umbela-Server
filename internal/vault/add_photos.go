@@ -2,6 +2,8 @@ package vault
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"umbela-server/internal/ingestion"
 	"umbela-server/internal/storage"
 )
@@ -11,7 +13,13 @@ func (v *Vault) AddPhotos(ctx context.Context,addImagesPath string, lastDirIsAlb
 		return err
 	}
 
-	directoryFileGroups, err := ingestion.ScanDirectory(addImagesPath, lastDirIsAlbum)
+	extractDir, err := os.MkdirTemp(addImagesPath, "umbela-extract-*")
+	if err != nil {
+		return fmt.Errorf("creating directory: %w", err)
+	}
+	defer os.RemoveAll(extractDir)
+
+	directoryFileGroups, err := ingestion.ScanDirectory(addImagesPath, extractDir, lastDirIsAlbum)
 	if err != nil {
 		return err
 	}

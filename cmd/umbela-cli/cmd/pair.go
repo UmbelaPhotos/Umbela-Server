@@ -31,16 +31,14 @@ func Pair(cmd *cobra.Command, args []string) error {
 		crypto.CleanBytes(userSecrets.KEK)
 	}()
 
-	// 1. Cargar la configuración cifrada
 	globalCfg, err := config.Read(userSecrets.VaultPath, userSecrets.KEK)
 	if err != nil {
-		return fmt.Errorf("error leyendo configuración: %w", err)
+		return fmt.Errorf("reading configuration: %w", err)
 	}
 
-	// 2. Inicializar TorController para obtener el dominio .onion actual
 	torController, err := tor.NewController(&globalCfg.Server)
 	if err != nil {
-		return fmt.Errorf("error inicializando controlador de Tor: %w", err)
+		return fmt.Errorf("new tor controller: %w", err)
 	}
 
 	// Aseguramos que exista o recupere la llave Ed25519

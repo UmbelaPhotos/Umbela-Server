@@ -32,7 +32,6 @@ jobs:
       - name: Compilar
         run: |
           mkdir -p dist
-          go build -trimpath -ldflags "-s -w" -o dist/umbela-desktop ./cmd/umbela-desktop
           go build -trimpath -ldflags "-s -w" -o dist/umbela-cli ./cmd/umbela-cli
 
       - name: Instalar nfpm
@@ -41,13 +40,14 @@ jobs:
       - name: Empaquetar
         env:
           ARCH: ${{ matrix.arch }}
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v0.0.0-dev' }}
         run: |
           export PATH="$PATH:$(go env GOPATH)/bin"
+          export VERSION="${VERSION#v}"
           for fmt in deb rpm archlinux; do
             nfpm package -p $fmt -f packaging/nfpm.yaml -t dist/
           done
-          cp dist/umbela-desktop dist/umbela-desktop-linux-${ARCH}
+          cp dist/umbela-cli dist/umbela-cli-linux-${ARCH}
 
       - uses: actions/upload-artifact@v4
         with:

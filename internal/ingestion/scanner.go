@@ -28,15 +28,10 @@ type FileGroup struct {
 	Album      string
 }
 
-func ScanDirectory(root string, lastDirIsAlbum bool) ([]*FileGroup, error) {
+func ScanDirectory(root string, extractDir string, lastDirIsAlbum bool) ([]*FileGroup, error) {
 	var groups []*FileGroup
 	groupMap := make(map[string]*FileGroup)
-	extractDir, err := os.MkdirTemp(root, "umbela-extract-*")
-	if err != nil {
-		return nil, fmt.Errorf("creating directory: %w", err)
-	}
-	defer os.RemoveAll(extractDir)
-
+	
 	zips, err := SearchZips(root)
 	if err != nil {
 		return nil, err

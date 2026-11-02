@@ -9,7 +9,7 @@ import (
 )
 
 func FindUserFolder(username string) (string, []byte, error) {
-	_, umbelaDir, err := config.GetExecutableAndUmbelaPath()
+	umbelaDir, err := config.UmbelaDir()
 
 	if err != nil {
 		return "", nil, err

@@ -46,8 +46,8 @@ func CreateProfile(cmd *cobra.Command, args []string) error {
 	KEK := crypto.DeriveKEK(passwordBytes, salt)
 
 	hashedUsername := crypto.HashText(username, salt)
-	_, baseDir, err := config.GetExecutableAndUmbelaPath()
-	if err!=nil{
+	baseDir, err := config.UmbelaDir()
+	if err != nil {
 		return err
 	}
 
@@ -59,16 +59,16 @@ func CreateProfile(cmd *cobra.Command, args []string) error {
 	userVault.SetUp()
 
 	torController, err := tor.NewController(&globalCfg.Server)
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 	_, err = torController.CreateOrRecoverKey()
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 
 	err = globalCfg.Save(KEK, salt)
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 
