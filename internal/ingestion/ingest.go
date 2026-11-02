@@ -24,7 +24,7 @@ type Result struct {
 
 // IngestPhotos orchestrate the concurrent processing pipeline.
 func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Processor, repo *storage.PhotoRepository, config *config.VaultConfig, dryRun bool, move bool) {
-	fmt.Println("Starting ingest")
+	fmt.Printf("\nStarting ingest\n")
 	total := len(groups)
 	jobs := make(chan *FileGroup, 100)
 	results := make(chan Result, 100)
@@ -33,9 +33,7 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 	const numWorkers = 8
 
 	for range numWorkers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for group := range jobs {
 				if ctx.Err() != nil {
 					return
@@ -43,7 +41,7 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 				photo, err := processGroup(ctx, group, processor, repo, config.ImageDir, dryRun, move, config.DEK)
 				results <- Result{Group: group, Photo: photo, Err: err}
 			}
-		}()
+		})
 	}
 
 	go func() {

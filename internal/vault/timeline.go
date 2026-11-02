@@ -55,6 +55,27 @@ func (v *Vault) GetTimelinePage(
 	pageSize int,
 	cursor string,
 ) (photos []*pb.PhotoSummary, nextCursor string, err error) {
+	return v.timelinePage(ctx, "", fromUnix, toUnix, pageSize, cursor)
+}
+
+// GetAlbumTimelinePage is GetTimelinePage limited to the photos of one album.
+func (v *Vault) GetAlbumTimelinePage(
+	ctx context.Context,
+	albumID string,
+	fromUnix, toUnix int64,
+	pageSize int,
+	cursor string,
+) (photos []*pb.PhotoSummary, nextCursor string, err error) {
+	return v.timelinePage(ctx, albumID, fromUnix, toUnix, pageSize, cursor)
+}
+
+func (v *Vault) timelinePage(
+	ctx context.Context,
+	albumID string,
+	fromUnix, toUnix int64,
+	pageSize int,
+	cursor string,
+) (photos []*pb.PhotoSummary, nextCursor string, err error) {
 	if pageSize <= 0 {
 		pageSize = defaultTimelinePage
 	}
@@ -69,6 +90,9 @@ func (v *Vault) GetTimelinePage(
 		// One extra row tells us whether another page exists.
 		Limit(int64(pageSize) + 1)
 
+	if albumID != "" {
+		query = query.Where("p.id IN (SELECT photo_id FROM album_photos WHERE album_id = ?)", albumID)
+	}
 	if fromUnix > 0 {
 		query = query.Where("captured_at >= ?", fromUnix)
 	}

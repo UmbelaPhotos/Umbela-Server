@@ -27,11 +27,11 @@ func (r *AlbumRepository) Save(ctx context.Context, album *models.Album) error {
     }
 	_, err := r.db.NewInsert().
         Model(album).
-        Returning("NONE"). 
+        Returning(""). 
         Exec(ctx)
     return err
 }
-func (r *AlbumRepository) GetByID(ctx context.Context, id int64) (*models.Album, error){
+func (r *AlbumRepository) GetByID(ctx context.Context, id string) (*models.Album, error){
 	album := models.Album{}
 	err := r.db.NewSelect().Model(&album).Where("id = ?", id).Scan(ctx)
 	if err != nil {
@@ -54,14 +54,59 @@ func (r *AlbumRepository) ListPaginated(ctx context.Context, limit int64, offset
 	return albums, total, nil
 }
 
-func (r *AlbumRepository) Delete(ctx context.Context, id int64) error{
+func (r *AlbumRepository) Delete(ctx context.Context, id string) error{
 	result, err := r.db.NewDelete().Model((*models.Album)(nil)).Where("id = ?", id).Exec(ctx)
 	if err != nil {
-    	return fmt.Errorf("deleting album %d: %w", id, err)
+    	return fmt.Errorf("deleting album %s: %w", id, err)
 	}
 	rows, _ := result.RowsAffected()
 	if rows == 0 {
-		return fmt.Errorf("album %d not found: %w", id, sql.ErrNoRows)
+		return fmt.Errorf("album %s not found: %w", id, sql.ErrNoRows)
 	}
 	return nil
+}
+
+// AlbumRow is an album as the list shows it.
+type AlbumRow struct {
+	ID           string `bun:"id"`
+	Name         string `bun:"name"`
+	PhotoCount   int    `bun:"photo_count"`
+	CoverPhotoID string `bun:"cover_photo_id"`
+}
+
+// ListWithCounts returns every album, most recently updated first, with its
+// number of photos. A album without an explicit cover uses its newest photo.
+func (r *AlbumRepository) ListWithCounts(ctx context.Context) ([]AlbumRow, error) {
+	var rows []AlbumRow
+	err := r.db.NewSelect().
+		TableExpr("albums AS a").
+		ColumnExpr("a.id AS id, a.name AS name").
+		ColumnExpr("(SELECT COUNT(*) FROM album_photos ap WHERE ap.album_id = a.id) AS photo_count").
+		ColumnExpr(`COALESCE(NULLIF(a.cover_photo_id, ''), (
+			SELECT ap.photo_id FROM album_photos ap
+			JOIN photos p ON p.id = ap.photo_id
+			WHERE ap.album_id = a.id
+			ORDER BY p.captured_at DESC, p.id DESC LIMIT 1
+		), '') AS cover_photo_id`).
+		OrderExpr("a.updated_at DESC, a.id DESC").
+		Scan(ctx, &rows)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("listing albums: %w", err)
+	}
+	return rows, nil
+}
+
+// AddPhoto puts a photo in an album. Adding it twice is not an error.
+func (r *AlbumRepository) AddPhoto(ctx context.Context, albumID, photoID string) error {
+	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		link := &models.AlbumPhoto{AlbumID: albumID, PhotoID: photoID}
+		if _, err := tx.NewInsert().Model(link).On("CONFLICT DO NOTHING").Exec(ctx); err != nil {
+			return fmt.Errorf("adding photo %s to album %s: %w", photoID, albumID, err)
+		}
+		_, err := tx.NewUpdate().Model((*models.Album)(nil)).
+			Set("updated_at = CURRENT_TIMESTAMP").
+			Where("id = ?", albumID).
+			Exec(ctx)
+		return err
+	})
 }

@@ -50,7 +50,7 @@ func (s *AuthServer) Unlock(ctx context.Context, req *connect.Request[pb.UnlockR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("KEK vacía"))
 	}
 
-	// Verificar si la clave enviada por la app es correcta. 
+	// Verificar si la clave enviada por la app es correcta.
 	// Si el servidor ya está desbloqueado (por CLI), comparamos en RAM.
 	if s.keyAgent.IsUnlocked() {
 		currentKey, _ := s.keyAgent.GetKey()
@@ -59,7 +59,7 @@ func (s *AuthServer) Unlock(ctx context.Context, req *connect.Request[pb.UnlockR
 		}
 	} else {
 		// Si el servidor estaba bloqueado, intenta desbloquear el Vault (necesitarás este método en vault.go)
-		// err := s.v.ValidateAndLoadKEK(kek) 
+		// err := s.v.ValidateAndLoadKEK(kek)
 		// if err != nil { return err }
 		s.keyAgent.SetKey(kek)
 	}

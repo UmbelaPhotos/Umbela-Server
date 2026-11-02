@@ -1,0 +1,55 @@
+name: release-linux
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  linux:
+    strategy:
+      matrix:
+        include:
+          - { arch: amd64, runner: ubuntu-latest }
+          - { arch: arm64, runner: ubuntu-24.04-arm }
+    runs-on: ${{ matrix.runner }}
+    container: debian:bookworm
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - name: Dependencias de compilación
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential pkg-config git ca-certificates \
+            libvips-dev libssl-dev
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Compilar
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags "-s -w" -o dist/umbela-desktop ./cmd/umbela-desktop
+          go build -trimpath -ldflags "-s -w" -o dist/umbela-cli ./cmd/umbela-cli
+
+      - name: Instalar nfpm
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+
+      - name: Empaquetar
+        env:
+          ARCH: ${{ matrix.arch }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          export PATH="$PATH:$(go env GOPATH)/bin"
+          for fmt in deb rpm archlinux; do
+            nfpm package -p $fmt -f packaging/nfpm.yaml -t dist/
+          done
+          cp dist/umbela-desktop dist/umbela-desktop-linux-${ARCH}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: dist/*

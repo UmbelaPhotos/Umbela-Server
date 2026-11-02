@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"slices"
 	"context"
 	"errors"
 	"fmt"
@@ -26,9 +27,9 @@ type CommandRun func(cmd *cobra.Command, args []string) error
 type Middleware func(CommandRun) CommandRun
 
 func Chain(finalFunc CommandRun, middlewares ...Middleware) CommandRun {
-	for i := len(middlewares) - 1; i >= 0; i-- {
+	for _, middleware := range slices.Backward(middlewares) {
 		// First one in the list is the first one to check
-		finalFunc = middlewares[i](finalFunc)
+		finalFunc = middleware(finalFunc)
 	}
 	return finalFunc
 }

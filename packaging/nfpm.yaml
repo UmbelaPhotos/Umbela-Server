@@ -1,0 +1,18 @@
+name: umbela
+arch: ${ARCH}
+version: ${VERSION}
+maintainer: Juan <65680050+juanavelar87@users.noreply.github.com>
+description: Umbela server
+license: AGPL-3.0-only
+contents:
+  - src: dist/umbela-desktop
+    dst: /usr/bin/umbela-desktop
+  - src: dist/umbela-cli
+    dst: /usr/bin/umbela-cli
+overrides:
+  deb:
+    depends: [libvips42, libssl3]
+  rpm:
+    depends: [vips, openssl-libs]
+  archlinux:
+    depends: [libvips, openssl]

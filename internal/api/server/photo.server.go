@@ -29,13 +29,29 @@ func (s *PhotoServer) GetTimeline(ctx context.Context, req *connect.Request[pb.G
 		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
 	}
 
-	photos, next, err := s.v.GetTimelinePage(
-		ctx,
-		req.Msg.GetFromUnix(),
-		req.Msg.GetToUnix(),
-		int(req.Msg.GetPageSize()),
-		req.Msg.GetCursor(),
+	var (
+		photos []*pb.PhotoSummary
+		next   string
+		err    error
 	)
+	if albumID := req.Msg.GetAlbumId(); albumID != "" {
+		photos, next, err = s.v.GetAlbumTimelinePage(
+			ctx,
+			albumID,
+			req.Msg.GetFromUnix(),
+			req.Msg.GetToUnix(),
+			int(req.Msg.GetPageSize()),
+			req.Msg.GetCursor(),
+		)
+	} else {
+		photos, next, err = s.v.GetTimelinePage(
+			ctx,
+			req.Msg.GetFromUnix(),
+			req.Msg.GetToUnix(),
+			int(req.Msg.GetPageSize()),
+			req.Msg.GetCursor(),
+		)
+	}
 	if errors.Is(err, vault.ErrInvalidCursor) {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -88,7 +104,18 @@ func (s *PhotoServer) StreamFullImage(ctx context.Context, req *connect.Request[
 }
 
 func (s *PhotoServer) GetPhotoDetails(ctx context.Context, req *connect.Request[pb.GetPhotoDetailsRequest]) (*connect.Response[pb.GetPhotoDetailsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	details, err := s.v.GetPhotoDetails(ctx, req.Msg.GetPhotoId())
+	if errors.Is(err, vault.ErrPhotoNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.GetPhotoDetailsResponse{Photo: details}), nil
 }
 
 func (s *PhotoServer) ToggleFavorite(ctx context.Context, req *connect.Request[pb.ToggleFavoriteRequest]) (*connect.Response[pb.ToggleFavoriteResponse], error) {
@@ -107,11 +134,32 @@ func (s *PhotoServer) ToggleFavorite(ctx context.Context, req *connect.Request[p
 }
 
 func (s *PhotoServer) DeletePhoto(ctx context.Context, req *connect.Request[pb.DeletePhotoRequest]) (*connect.Response[pb.DeletePhotoResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	if err := s.v.DeletePhoto(ctx, req.Msg.GetPhotoId()); err != nil {
+		if errors.Is(err, vault.ErrPhotoNotFound) {
+			return nil, connect.NewError(connect.CodeNotFound, err)
+		}
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.DeletePhotoResponse{Success: true}), nil
 }
 
 func (s *PhotoServer) AddPhotoToAlbum(ctx context.Context, req *connect.Request[pb.AddPhotoToAlbumRequest]) (*connect.Response[pb.AddPhotoToAlbumResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	err := s.v.AddPhotoToAlbum(ctx, req.Msg.GetPhotoId(), req.Msg.GetAlbumId())
+	if errors.Is(err, vault.ErrPhotoNotFound) || errors.Is(err, vault.ErrAlbumNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.AddPhotoToAlbumResponse{Success: true}), nil
 }
 
 func (s *PhotoServer) ListPeople(ctx context.Context, req *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error) {
@@ -127,11 +175,30 @@ func (s *PhotoServer) GetPersonDetails(ctx context.Context, req *connect.Request
 }
 
 func (s *PhotoServer) ListAlbums(ctx context.Context, req *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	albums, err := s.v.ListAlbums(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.ListAlbumsResponse{Albums: albums}), nil
 }
 
 func (s *PhotoServer) CreateAlbum(ctx context.Context, req *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	album, err := s.v.CreateAlbum(ctx, req.Msg.GetName())
+	if errors.Is(err, vault.ErrInvalidAlbumName) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.CreateAlbumResponse{Album: album}), nil
 }
 
 func (s *PhotoServer) ListPlaces(ctx context.Context, req *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error) {

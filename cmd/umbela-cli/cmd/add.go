@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var noAlbums bool
+
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add photos to your personal library",
@@ -31,13 +33,13 @@ func AddImages(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("converting to absolute path: %w\n", err)
 	}
-	fmt.Printf("processing images in path: %v\n", addImagesPath)
+	fmt.Printf("Processing images in path: %v\n", addImagesPath)
 
 	globalCfg, err := config.Read(userSecrets.VaultPath, userSecrets.KEK)
 
 	userVault := vault.NewVault(userSecrets.VaultPath, &globalCfg.Vault)
 	
-	err = userVault.AddPhotos(ctx, addImagesPath)
+	err = userVault.AddPhotos(ctx, addImagesPath, !noAlbums)
 	if err != nil{
 		return nil
 	}
@@ -46,5 +48,12 @@ func AddImages(cmd *cobra.Command, args []string) error {
 }
 
 func init() {
+	addCmd.Flags().BoolVar(
+		&noAlbums,
+		"no-albums", 
+		true,                
+		"Won't create albums",
+	)
+
 	rootCmd.AddCommand(addCmd)
 }

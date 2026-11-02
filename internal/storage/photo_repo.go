@@ -48,14 +48,14 @@ func (r *PhotoRepository) Save(ctx context.Context, photo *models.Photo) error {
 
 // GetByID searches a Photo by its id.
 //
-// Input:  ctx context.Context, id int64
+// Input:  ctx context.Context, id string
 // Output: *models.Photo found, or error if it doesnt exists / error in the BD
-func (r *PhotoRepository) GetByID(ctx context.Context, id int64) (*models.Photo, error) {
+func (r *PhotoRepository) GetByID(ctx context.Context, id string) (*models.Photo, error) {
 	photo := new(models.Photo)
 	err := r.db.NewSelect().Model(photo).Where("id = ?", id).Scan(ctx)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) { 
-			return nil, fmt.Errorf("photo with id %d not found: %w", id, err)
+			return nil, fmt.Errorf("photo with id %s not found: %w", id, err)
 		}
 		return nil, fmt.Errorf("trying to get the image by id: %w", err)
 	}
@@ -91,19 +91,28 @@ func (r *PhotoRepository) ListPaginated(ctx context.Context, limit int64, offset
 	return photos, total, nil
 }
 
-// Delete a photo from the DB by its ID.
+// Delete a photo from the DB by its ID, together with its album memberships.
+// An album that used the photo as cover is left without cover.
 // NOTE: It doesnt delete the file; that is responsability of the caller.
 //
-// Input:  ctx, id int64
+// Input:  ctx, id string
 // Output: error if it doesnt exists or crash in the BD
-func (r *PhotoRepository) Delete(ctx context.Context, id int64) error {
-	result, err := r.db.NewDelete().Model((*models.Photo)(nil)).Where("id = ?", id).Exec(ctx)
-	if err != nil {
-		return fmt.Errorf("deleting photo %d: %w", id, err)
-	}
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
-		return fmt.Errorf("photo %d not found: %w", id, sql.ErrNoRows)
-	}
-	return nil
+func (r *PhotoRepository) Delete(ctx context.Context, id string) error {
+	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		if _, err := tx.NewDelete().Model((*models.AlbumPhoto)(nil)).Where("photo_id = ?", id).Exec(ctx); err != nil {
+			return fmt.Errorf("removing photo %s from albums: %w", id, err)
+		}
+		if _, err := tx.NewUpdate().Model((*models.Album)(nil)).Set("cover_photo_id = ''").Where("cover_photo_id = ?", id).Exec(ctx); err != nil {
+			return fmt.Errorf("clearing covers of photo %s: %w", id, err)
+		}
+		result, err := tx.NewDelete().Model((*models.Photo)(nil)).Where("id = ?", id).Exec(ctx)
+		if err != nil {
+			return fmt.Errorf("deleting photo %s: %w", id, err)
+		}
+		rows, _ := result.RowsAffected()
+		if rows == 0 {
+			return fmt.Errorf("photo %s not found: %w", id, sql.ErrNoRows)
+		}
+		return nil
+	})
 }

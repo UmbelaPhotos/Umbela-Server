@@ -35,10 +35,10 @@ func Run(ctx context.Context, cfg *config.ServerConfig, v *vault.Vault, torCtrl 
 
 	// 4. Montar Enrutador (Mux)
 	mux := http.NewServeMux()
-	
+
 	authPath, authHandler := pbconnect.NewAuthServiceHandler(authHandlerImpl, connectOpts)
 	photoPath, photoHandler := pbconnect.NewPhotoServiceHandler(photoHandlerImpl, connectOpts)
-	
+
 	mux.Handle(authPath, authHandler)
 	mux.Handle(photoPath, photoHandler)
 
@@ -74,10 +74,10 @@ func Run(ctx context.Context, cfg *config.ServerConfig, v *vault.Vault, torCtrl 
 
 	<-stopChan
 	fmt.Println("\nShutting down server and removing RAM...")
-	
+
 	keyAgent.ClearKey()
 	sessionStore.DestroyAll()
-	
+
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return httpServer.Shutdown(shutdownCtx)
