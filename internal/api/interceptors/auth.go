@@ -54,7 +54,6 @@ func (i *AuthInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 }
 
 func isPublicProcedure(procedure string) bool {
-	// Permite conectarse a Tor y loguearse sin necesidad de un token previo
 	return procedure == "/umbela.v1.AuthService/Identify" ||
 		procedure == "/umbela.v1.AuthService/Unlock"
 }
