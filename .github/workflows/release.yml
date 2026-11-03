@@ -38,7 +38,8 @@ jobs:
           curl -fsSL -o "$f" "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/$f"
           echo "${{ matrix.ort_sha }}  $f" | sha256sum -c -
           tar xzf "$f"
-          cp -L "onnxruntime-linux-${{ matrix.ort_arch }}-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}" dist/
+          # Fixed name: nfpm does not expand variables in contents paths.
+          cp -L "onnxruntime-linux-${{ matrix.ort_arch }}-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}" dist/libonnxruntime.so
 
       - name: Compilar
         run: |
@@ -63,7 +64,8 @@ jobs:
           # Plain download: the binary named `umbela` plus the library next to it.
           mkdir -p stage
           cp dist/umbela-cli stage/umbela
-          cp "dist/libonnxruntime.so.${ORT_VERSION}" LICENSE stage/
+          cp dist/libonnxruntime.so "stage/libonnxruntime.so.${ORT_VERSION}"
+          cp LICENSE stage/
           tar -czf dist/umbela-cli-linux-${ARCH}.tar.gz -C stage .
 
       - uses: actions/upload-artifact@v4

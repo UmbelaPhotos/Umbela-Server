@@ -8,8 +8,8 @@ contents:
   - src: dist/umbela-cli
     dst: /usr/bin/umbela
   # ONNX Runtime for face recognition; the program looks for it in this folder.
-  - src: dist/libonnxruntime.so.${ORT_VERSION}
-    dst: /usr/lib/umbela/libonnxruntime.so.${ORT_VERSION}
+  - src: dist/libonnxruntime.so
+    dst: /usr/lib/umbela/libonnxruntime.so
 overrides:
   deb:
     depends: [libvips42, libssl3, tor]
