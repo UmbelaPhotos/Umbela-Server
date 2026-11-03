@@ -56,11 +56,15 @@ Use `apt install ./file.deb` rather than `dpkg -i`, which does not download depe
 
 > **Raspberry Pi:** 64-bit Raspberry Pi OS is supported. The 32-bit (`armv7`) system is not.
 
-If you prefer the plain binary (`umbela-cli-linux-<arch>`), install libvips, OpenSSL and Tor (the `tor` package) with your package manager, then:
+The packages also install the ONNX Runtime library used for face recognition in `/usr/lib/umbela`.
+
+If you prefer the plain download (`umbela-cli-linux-<arch>.tar.gz`), install libvips, OpenSSL and Tor (the `tor` package) with your package manager, then:
 
 ```bash
-chmod +x umbela-cli-linux-amd64
-sudo mv umbela-cli-linux-amd64 /usr/local/bin/umbela
+tar -xzf umbela-cli-linux-amd64.tar.gz
+sudo mv umbela /usr/local/bin/
+sudo mkdir -p /usr/local/lib/umbela
+sudo mv libonnxruntime.so.* /usr/local/lib/umbela/
 ```
 
 ### macOS
@@ -71,18 +75,23 @@ sudo mv umbela-cli-linux-amd64 /usr/local/bin/umbela
    brew install vips tor
    ```
 
-2. Extract the archive and move the binary to your `PATH`:
+2. Extract the archive and move the files into place:
 
    ```bash
    tar -xzf umbela-cli-darwin-arm64.tar.gz
    sudo mv umbela /usr/local/bin/
+   # Apple Silicon only: the library used for face recognition
+   sudo mkdir -p /usr/local/lib/umbela
+   sudo mv libonnxruntime.*.dylib /usr/local/lib/umbela/
    ```
 
-3. The binary is not signed or notarized yet. If macOS blocks it after a browser download, remove the quarantine flag:
+3. The files are not signed or notarized yet. If macOS blocks them after a browser download, remove the quarantine flag:
 
    ```bash
-   xattr -d com.apple.quarantine /usr/local/bin/umbela
+   sudo xattr -dr com.apple.quarantine /usr/local/bin/umbela /usr/local/lib/umbela
    ```
+
+> **Intel Macs:** the server works, but face recognition is not available, because ONNX Runtime does not publish a macOS Intel build.
 
 ### Windows
 
@@ -95,6 +104,8 @@ You need Go (the version in `go.mod`), a C compiler, `pkg-config`, and the libvi
 ```bash
 CGO_ENABLED=1 go build -o umbela ./cmd/umbela-cli
 ```
+
+Face recognition also needs the [ONNX Runtime](https://github.com/microsoft/onnxruntime/releases) shared library, version 1.31.0 exactly. Point `UMBELA_ORT_LIB` to it, or the server will start with face recognition turned off.
 
 ## Getting Started
 

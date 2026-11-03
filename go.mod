@@ -15,6 +15,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/uptrace/bun v1.3.0
 	github.com/uptrace/bun/dialect/sqlitedialect v1.3.0
+	github.com/yalue/onnxruntime_go v1.38.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/image v0.47.0
 	golang.org/x/term v0.47.0

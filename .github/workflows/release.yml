@@ -9,18 +9,20 @@ jobs:
     strategy:
       matrix:
         include:
-          - { arch: amd64, runner: ubuntu-latest }
-          - { arch: arm64, runner: ubuntu-24.04-arm }
+          - { arch: amd64, runner: ubuntu-latest, ort_arch: x64, ort_sha: cc5c72baf5ae5c8238a6841f0897227be2d02826b9cf98eaf02fdefaeeb03a57 }
+          - { arch: arm64, runner: ubuntu-24.04-arm, ort_arch: aarch64, ort_sha: c5b8b3cca31f3d643a3b313b8f42e2d0f16a4fcefd02cda343d97bd5306afaab }
     runs-on: ${{ matrix.runner }}
     container: debian:bookworm
     env:
       CGO_ENABLED: "1"
+      # Must match the version onnxruntime_go in go.mod is built for.
+      ORT_VERSION: "1.31.0"
     steps:
       - name: Dependencias de compilación
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            build-essential pkg-config git ca-certificates \
+            build-essential pkg-config git ca-certificates curl \
             libvips-dev libssl-dev
 
       - uses: actions/checkout@v4
@@ -28,6 +30,15 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - name: Librería ONNX Runtime
+        run: |
+          mkdir -p dist
+          f=onnxruntime-linux-${{ matrix.ort_arch }}-${ORT_VERSION}.tgz
+          curl -fsSL -o "$f" "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/$f"
+          echo "${{ matrix.ort_sha }}  $f" | sha256sum -c -
+          tar xzf "$f"
+          cp -L "onnxruntime-linux-${{ matrix.ort_arch }}-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}" dist/
 
       - name: Compilar
         run: |
@@ -48,22 +59,33 @@ jobs:
           for fmt in deb rpm archlinux; do
             nfpm package -p $fmt -f packaging/nfpm.yaml -t dist/
           done
-          cp dist/umbela-cli dist/umbela-cli-linux-${ARCH}
+
+          # Plain download: the binary named `umbela` plus the library next to it.
+          mkdir -p stage
+          cp dist/umbela-cli stage/umbela
+          cp "dist/libonnxruntime.so.${ORT_VERSION}" LICENSE stage/
+          tar -czf dist/umbela-cli-linux-${ARCH}.tar.gz -C stage .
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}
-          path: dist/*
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.pkg.tar.zst
+            dist/*.tar.gz
 
   macos:
     strategy:
       matrix:
         include:
-          - { arch: arm64, runner: macos-latest }
+          - { arch: arm64, runner: macos-latest, ort_sha: 1031b36dd3bdaa8d976a6130d9cf2a05e9be320b93ae804f8427b91dc3432afc }
+          # ONNX Runtime has no macOS Intel build, so this one runs without face recognition.
           - { arch: amd64, runner: macos-15-intel }
     runs-on: ${{ matrix.runner }}
     env:
       CGO_ENABLED: "1"
+      ORT_VERSION: "1.31.0"
     steps:
       - name: Dependencias de compilación
         run: brew install vips pkgconf
@@ -74,16 +96,29 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Librería ONNX Runtime
+        if: matrix.ort_sha != ''
+        run: |
+          f=onnxruntime-osx-arm64-${ORT_VERSION}.tgz
+          curl -fsSL -o "$f" "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/$f"
+          echo "${{ matrix.ort_sha }}  $f" | shasum -a 256 -c -
+          tar xzf "$f"
+          cp -L "onnxruntime-osx-arm64-${ORT_VERSION}/lib/libonnxruntime.${ORT_VERSION}.dylib" .
+
       - name: Compilar
         run: |
           mkdir -p dist
           go build -trimpath -ldflags "-s -w" -o umbela ./cmd/umbela-cli
-          tar -czf dist/umbela-cli-darwin-${{ matrix.arch }}.tar.gz umbela LICENSE
+          files="umbela LICENSE"
+          if [ -f "libonnxruntime.${ORT_VERSION}.dylib" ]; then
+            files="$files libonnxruntime.${ORT_VERSION}.dylib"
+          fi
+          tar -czf dist/umbela-cli-darwin-${{ matrix.arch }}.tar.gz $files
 
       - uses: actions/upload-artifact@v4
         with:
           name: macos-${{ matrix.arch }}
-          path: dist/*
+          path: dist/*.tar.gz
 
   release:
     needs: [linux, macos]
@@ -103,5 +138,4 @@ jobs:
             dist/*.deb
             dist/*.rpm
             dist/*.pkg.tar.zst
-            dist/umbela-cli-linux-*
             dist/*.tar.gz

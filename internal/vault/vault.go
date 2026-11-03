@@ -16,7 +16,6 @@ type Vault struct {
 	imageProcessor *image.Processor
 	torController  *tor.Controller
 
-	dek    []byte
 	config *config.VaultConfig
 }
 
@@ -35,7 +34,7 @@ func (v *Vault) SetUp() error {
 	}
 	fmt.Println("Initialized Govips")
 
-	v.db, err = db.InitDB(v.path, v.dek)
+	v.db, err = db.InitDB(v.path, v.config.DEK)
 	if err != nil {
 		return err
 	}

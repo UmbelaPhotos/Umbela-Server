@@ -81,6 +81,39 @@ func InitDB(baseDir string, DEK []byte) (*bun.DB, error) {
 	return db, nil
 }
 
+// addColumnIfMissing adds a column to an existing table when it is not there yet.
+func addColumnIfMissing(ctx context.Context, db *bun.DB, table, column, definition string) error {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return fmt.Errorf("reading columns of %s: %w", table, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return fmt.Errorf("reading columns of %s: %w", table, err)
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	rows.Close()
+
+	if _, err := db.ExecContext(ctx,
+		fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition),
+	); err != nil {
+		return fmt.Errorf("adding %s.%s: %w", table, column, err)
+	}
+	return nil
+}
+
 // runMigrations creates the tables.
 // Here goes the new models that require persistance
 //
@@ -94,6 +127,7 @@ func runMigrations(db *bun.DB) error {
 		(*models.Photo)(nil),
 		(*models.Album)(nil),
 		(*models.AlbumPhoto)(nil),
+		(*models.PhotoFace)(nil),
 	}
 
 	for _, model := range models {
@@ -104,6 +138,25 @@ func runMigrations(db *bun.DB) error {
 		if err != nil {
 			return fmt.Errorf("migrando %T: %w", model, err)
 		}
+	}
+
+	// CREATE TABLE IF NOT EXISTS does not touch tables that already exist, so
+	// the columns added after the first release are added here.
+	for _, c := range []struct{ table, column, definition string }{
+		{"photos", "faces_scanned_at", "INTEGER NOT NULL DEFAULT 0"},
+		{"faces", "samples", "INTEGER NOT NULL DEFAULT 0"},
+		{"photo_faces", "embedding", "BLOB"},
+	} {
+		if err := addColumnIfMissing(ctx, db, c.table, c.column, c.definition); err != nil {
+			return err
+		}
+	}
+
+	// The face scanner looks for photos that were not scanned yet.
+	if _, err := db.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_photos_faces_pending ON photos (faces_scanned_at)`,
+	); err != nil {
+		return fmt.Errorf("creating face scan index: %w", err)
 	}
 
 	// The timeline pages by (captured_at, id) and the month buckets scan

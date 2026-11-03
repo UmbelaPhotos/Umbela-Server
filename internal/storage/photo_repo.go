@@ -102,6 +102,9 @@ func (r *PhotoRepository) Delete(ctx context.Context, id string) error {
 		if _, err := tx.NewDelete().Model((*models.AlbumPhoto)(nil)).Where("photo_id = ?", id).Exec(ctx); err != nil {
 			return fmt.Errorf("removing photo %s from albums: %w", id, err)
 		}
+		if _, err := tx.NewDelete().Model((*models.PhotoFace)(nil)).Where("photo_id = ?", id).Exec(ctx); err != nil {
+			return fmt.Errorf("removing the faces of photo %s: %w", id, err)
+		}
 		if _, err := tx.NewUpdate().Model((*models.Album)(nil)).Set("cover_photo_id = ''").Where("cover_photo_id = ?", id).Exec(ctx); err != nil {
 			return fmt.Errorf("clearing covers of photo %s: %w", id, err)
 		}

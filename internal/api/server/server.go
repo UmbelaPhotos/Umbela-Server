@@ -72,8 +72,26 @@ func Run(ctx context.Context, cfg *config.ServerConfig, v *vault.Vault, torCtrl 
 		}
 	}()
 
+	// Face recognition runs in the background while the server is up. If it
+	// cannot start (for example the ONNX Runtime library is missing) the rest
+	// of the server keeps working.
+	scanCtx, stopScan := context.WithCancel(ctx)
+	scanDone := make(chan struct{})
+	go func() {
+		defer close(scanDone)
+		if err := v.RunFaceScanner(scanCtx); err != nil && scanCtx.Err() == nil {
+			fmt.Printf("Face recognition is off: %v\n", err)
+		}
+	}()
+
 	<-stopChan
 	fmt.Println("\nShutting down server and removing RAM...")
+
+	stopScan()
+	select {
+	case <-scanDone:
+	case <-time.After(10 * time.Second):
+	}
 
 	keyAgent.ClearKey()
 	sessionStore.DestroyAll()

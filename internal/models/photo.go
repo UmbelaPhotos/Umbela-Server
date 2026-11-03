@@ -24,6 +24,9 @@ type Photo struct {
 	Blurhash    string    `bun:"blurhash"`
 	CreatedAt   time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	Favorite	bool	  `bun:"favorite,default:false"`
+	// FacesScannedAt is the unix time when the face scan of this photo
+	// finished; 0 means the photo is still waiting to be scanned.
+	FacesScannedAt int64 `bun:"faces_scanned_at,notnull,default:0"`
 
 	Faces []*Face `bun:"m2m:photo_faces,join:Photo=Face"`
 }
@@ -33,7 +36,10 @@ type Face struct {
 
 	ID         string `bun:"id,pk,type:text"`
 	PersonName string `bun:"person_name"`
-	Embedding  []byte `bun:"embedding,notnull"`
+	// Embedding is the centroid (normalized mean) of the embeddings of all the
+	// faces assigned to this person, and Samples is how many that is.
+	Embedding []byte `bun:"embedding,notnull"`
+	Samples   int    `bun:"samples,notnull,default:0"`
 
 	Photos []*Photo `bun:"m2m:photo_faces,join:Face=Photo"`
 }
@@ -47,10 +53,14 @@ type PhotoFace struct {
 	Photo		*Photo `bun:"rel:belongs-to,join:photo_id=id"`
 	Face		*Face  `bun:"rel:belongs-to,join:face_id=id"`
 
+	// The box is relative to the (auto-rotated) photo: 0 is the top/left edge
+	// and 1 the bottom/right edge.
 	BBoxMinX	float64	`bun:"bbox_min_x,notnull"`
 	BBoxMinY	float64	`bun:"bbox_min_y,notnull"`
 	BBoxMaxX	float64	`bun:"bbox_max_x,notnull"`
 	BBoxMaxY	float64	`bun:"bbox_max_y,notnull"`
 
 	Confidence 	float64	`bun:"confidence"`
+	// Embedding of this particular face, kept to be able to regroup people.
+	Embedding []byte `bun:"embedding"`
 }
