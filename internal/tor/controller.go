@@ -69,6 +69,10 @@ func (c *Controller) Start(ctx context.Context) error {
 		NoHush: 	 true,
 		ExtraArgs:   []string{"--quiet"},
 	}
+	if exe, args := bundledTor(); exe != "" {
+		startConf.ExePath = exe
+		startConf.ExtraArgs = append(startConf.ExtraArgs, args...)
+	}
 	if c.config.OneHopTor {
 		startConf.NoAutoSocksPort = true
 		startConf.ExtraArgs = append(startConf.ExtraArgs,

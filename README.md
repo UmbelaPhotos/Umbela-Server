@@ -95,7 +95,20 @@ sudo mv libonnxruntime.so.* /usr/local/lib/umbela/
 
 ### Windows
 
-Not available yet.
+Download `umbela-cli-windows-amd64.zip` and extract it to a folder of your choice, for example `C:\Umbela`. Everything it needs (Tor, the image libraries and the face recognition library) is inside, so there is nothing else to install.
+
+Open a terminal in that folder and run it:
+
+```powershell
+cd C:\Umbela
+.\umbela.exe create
+```
+
+To run `umbela` from any folder, add that folder to your `PATH`. Your data is kept in `C:\Users\<you>\.umbela`.
+
+> The program is not signed yet, so Windows SmartScreen may show "Windows protected your PC". Choose **More info** and then **Run anyway**. Antivirus software may also warn about it because it starts Tor; the source code and the build are public in this repository.
+
+Keep `umbela.exe` together with the other files of the zip: it looks for `tor\tor.exe`, `data\` and the DLLs next to itself.
 
 ### Building from source
 

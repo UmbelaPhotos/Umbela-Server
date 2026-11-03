@@ -122,8 +122,95 @@ jobs:
           name: macos-${{ matrix.arch }}
           path: dist/*.tar.gz
 
+  windows:
+    runs-on: windows-latest
+    env:
+      CGO_ENABLED: "1"
+      CC: gcc
+      # Must match the version onnxruntime_go in go.mod is built for.
+      ORT_VERSION: "1.31.0"
+      ORT_SHA256: 3958d8a44984160692c1b4ffd0de3cb48f8c39f9d34bb31e433db06e30b82195
+      # Tor Expert Bundle; the hash is the one in the signed sha256sums of that release.
+      TOR_VERSION: "16.0"
+      TOR_SHA256: 2ee123e9167318a3742778ff704e75f01d4780f05a14522d451fe011011077c4
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          path-type: inherit
+          install: >-
+            unzip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-libvips
+            mingw-w64-ucrt-x86_64-openssl
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Compilar
+        run: |
+          mkdir -p dist stage
+          go build -v -trimpath -ldflags "-s -w" -o stage/umbela.exe ./cmd/umbela-cli
+
+      - name: DLL de las que depende umbela.exe
+        run: |
+          # Every non-Windows DLL it needs, directly or through another DLL.
+          ldd stage/umbela.exe | grep -v -i "/c/windows" | awk '/=>/ {print $3}' | sort -u > dlls.txt
+          cat dlls.txt
+          while read -r dll; do
+            if [ ! -f "$dll" ]; then echo "missing DLL: $dll"; exit 1; fi
+            cp "$dll" stage/
+          done < dlls.txt
+
+      - name: Librería ONNX Runtime
+        run: |
+          f=onnxruntime-win-x64-${ORT_VERSION}.zip
+          curl -fsSL -o "$f" "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/$f"
+          echo "${ORT_SHA256}  $f" | sha256sum -c -
+          unzip -q "$f"
+          cp "onnxruntime-win-x64-${ORT_VERSION}/lib/onnxruntime.dll" stage/
+
+      - name: Tor
+        run: |
+          f=tor-expert-bundle-windows-x86_64-${TOR_VERSION}.tar.gz
+          curl -fsSL -o "$f" "https://archive.torproject.org/tor-package-archive/torbrowser/${TOR_VERSION}/$f"
+          echo "${TOR_SHA256}  $f" | sha256sum -c -
+          mkdir tor-bundle && tar xzf "$f" -C tor-bundle
+          mkdir -p stage/tor stage/data stage/licenses
+          cp tor-bundle/tor/tor.exe stage/tor/
+          cp tor-bundle/data/geoip tor-bundle/data/geoip6 stage/data/
+          cp tor-bundle/docs/*.txt stage/licenses/
+          cp LICENSE stage/
+
+      - name: Prueba en un entorno limpio
+        shell: pwsh
+        run: |
+          # Only the Windows folders in the PATH, as on a PC without MSYS2.
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          & .\stage\umbela.exe --help
+          if ($LASTEXITCODE -ne 0) { throw "umbela.exe does not start without MSYS2" }
+          & .\stage\tor\tor.exe --version
+          if ($LASTEXITCODE -ne 0) { throw "tor.exe does not start" }
+
+      - name: Comprimir
+        shell: pwsh
+        run: Compress-Archive -Path stage\* -DestinationPath dist\umbela-cli-windows-amd64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-amd64
+          path: dist/*.zip
+
   release:
-    needs: [linux, macos]
+    needs: [linux, macos, windows]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -141,3 +228,4 @@ jobs:
             dist/*.rpm
             dist/*.pkg.tar.zst
             dist/*.tar.gz
+            dist/*.zip
