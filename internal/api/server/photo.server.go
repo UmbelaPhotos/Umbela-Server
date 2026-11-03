@@ -163,15 +163,48 @@ func (s *PhotoServer) AddPhotoToAlbum(ctx context.Context, req *connect.Request[
 }
 
 func (s *PhotoServer) ListPeople(ctx context.Context, req *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	people, err := s.v.ListPeople(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.ListPeopleResponse{People: people}), nil
 }
 
 func (s *PhotoServer) LabelPerson(ctx context.Context, req *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	person, err := s.v.LabelPerson(ctx, req.Msg.GetPersonId(), req.Msg.GetName())
+	if errors.Is(err, vault.ErrPersonNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	if errors.Is(err, vault.ErrInvalidPersonName) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.LabelPersonResponse{Person: person}), nil
 }
 
 func (s *PhotoServer) GetPersonDetails(ctx context.Context, req *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	details, err := s.v.GetPersonDetails(ctx, req.Msg.GetPersonId())
+	if errors.Is(err, vault.ErrPersonNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(details), nil
 }
 
 func (s *PhotoServer) ListAlbums(ctx context.Context, req *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {

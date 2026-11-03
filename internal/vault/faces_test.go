@@ -110,4 +110,29 @@ func TestFaceScanner(t *testing.T) {
 	if shared == 0 {
 		t.Fatal("no person was matched across the two photos")
 	}
+
+	// With only two photos nobody reaches the minimum, so the list is empty,
+	// but the person in both photos is there with all of their photos.
+	listed, err := v.ListPeople(bg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 0 {
+		t.Fatalf("nobody has %d photos yet, got %v", minPhotosToListPerson, listed)
+	}
+
+	var sharedID string
+	err = v.db.NewRaw(`SELECT face_id FROM photo_faces GROUP BY face_id
+		HAVING COUNT(DISTINCT photo_id) > 1 LIMIT 1`).Scan(bg, &sharedID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	details, err := v.GetPersonDetails(bg, sharedID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(details.Photos) != 2 || details.Person.CoverPhotoId == "" {
+		t.Fatalf("the person in both photos should open with 2 photos and a cover: %v", details)
+	}
+	t.Logf("person %s: %d photos, cover %s", sharedID, len(details.Photos), details.Person.CoverPhotoId)
 }

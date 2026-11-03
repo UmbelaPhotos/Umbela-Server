@@ -7,6 +7,7 @@ import (
 
 	pb "umbela-server/internal/api/pb"
 	"umbela-server/internal/models"
+	"umbela-server/internal/storage"
 )
 
 // GetPhotoDetails returns what the viewer's info sheet shows for one photo.
@@ -18,6 +19,19 @@ func (v *Vault) GetPhotoDetails(ctx context.Context, photoID string) (*pb.PhotoD
 	}
 	if err != nil {
 		return nil, err
+	}
+
+	faceRows, err := storage.NewFaceRepository(v.db).FacesOfPhoto(ctx, photoID)
+	if err != nil {
+		return nil, err
+	}
+	found := make([]*pb.FaceInPhoto, 0, len(faceRows))
+	for _, f := range faceRows {
+		found = append(found, &pb.FaceInPhoto{
+			PersonId:   f.PersonID,
+			Name:       f.Name,
+			Confidence: float32(f.Confidence),
+		})
 	}
 
 	return &pb.PhotoDetails{
@@ -34,5 +48,6 @@ func (v *Vault) GetPhotoDetails(ctx context.Context, photoID string) (*pb.PhotoD
 		Longitude:       p.Longitude,
 		EncryptedAtRest: true,
 		Favorite:        p.Favorite,
+		Faces:           found,
 	}, nil
 }
