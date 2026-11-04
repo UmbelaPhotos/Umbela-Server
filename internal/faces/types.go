@@ -13,7 +13,7 @@ const (
 	EmbeddingSize = 128
 	// MatchThreshold is the cosine similarity above which two faces are
 	// merged into the same person automatically.
-	MatchThreshold = 0.6
+	MatchThreshold = 0.4
 	// SuggestThreshold is the cosine similarity (the value recommended for
 	// SFace) above which two faces might be the same person. Between this and
 	// MatchThreshold the pair should be suggested to the user, not merged.

@@ -18,7 +18,7 @@ const maxPersonNameLength = 100
 // people list, unless they have a name, which always lists them. Everybody
 // else is kept: their faces still appear in each photo and tapping one opens
 // all the photos of that person.
-const minPhotosToListPerson = 5
+const minPhotosToListPerson = 21
 
 func personSummary(r storage.PersonRow) *pb.PersonSummary {
 	return &pb.PersonSummary{

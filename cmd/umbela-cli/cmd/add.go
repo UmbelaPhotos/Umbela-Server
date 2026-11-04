@@ -50,8 +50,8 @@ func AddImages(cmd *cobra.Command, args []string) error {
 func init() {
 	addCmd.Flags().BoolVar(
 		&noAlbums,
-		"no-albums", 
-		true,                
+		"no-albums",
+		false,
 		"Won't create albums",
 	)
 

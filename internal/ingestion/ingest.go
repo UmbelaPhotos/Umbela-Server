@@ -159,6 +159,8 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 		}
 		photo.ThumbPath = thumbResult.ThumbPath
 		photo.Blurhash = thumbResult.Blurhash
+		photo.Width = thumbResult.Width
+		photo.Height = thumbResult.Height
 
 		plainBytes, err := os.ReadFile(imagePath)
 		if err != nil {

@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -10,22 +11,25 @@ import (
 	"umbela-server/internal/storage"
 )
 
-// Ana is in p1..p5 (the best face is in p2), Luis only in p2 and Eva only in
-// p6. Only Ana reaches the photos needed to be listed.
+// Ana is in as many photos as the list needs (p1..pN, the best face is in
+// p2), Luis only in p2 and Eva only in pe. Only Ana reaches the photos needed
+// to be listed.
+const anaPhotos = minPhotosToListPerson
+
+func lastAnaPhoto() string { return fmt.Sprintf("p%d", anaPhotos) }
+
 func seededPeople(t *testing.T) *Vault {
 	t.Helper()
-	v := seededVault(t, []models.Photo{
-		{ID: "p1", Hash: "h1", FilePath: "x", CapturedAt: 100},
-		{ID: "p2", Hash: "h2", FilePath: "x", CapturedAt: 200},
-		{ID: "p3", Hash: "h3", FilePath: "x", CapturedAt: 300},
-		{ID: "p4", Hash: "h4", FilePath: "x", CapturedAt: 400},
-		{ID: "p5", Hash: "h5", FilePath: "x", CapturedAt: 500},
-		{ID: "p6", Hash: "h6", FilePath: "x", CapturedAt: 600},
-	})
+	var photos []models.Photo
+	for i := 1; i <= anaPhotos; i++ {
+		photos = append(photos, models.Photo{ID: fmt.Sprintf("p%d", i), Hash: fmt.Sprintf("h%d", i), FilePath: "x", CapturedAt: int64(i) * 100})
+	}
+	photos = append(photos, models.Photo{ID: "pe", Hash: "he", FilePath: "x", CapturedAt: int64(anaPhotos+1) * 100})
+	v := seededVault(t, photos)
 	ctx := context.Background()
 
 	people := []models.Face{
-		{ID: "ana", Embedding: []byte{1}, Samples: 5},
+		{ID: "ana", Embedding: []byte{1}, Samples: anaPhotos},
 		{ID: "luis", Embedding: []byte{1}, Samples: 1},
 		{ID: "eva", Embedding: []byte{1}, Samples: 1},
 		{ID: "nobody", Embedding: []byte{1}}, // in no photo
@@ -34,14 +38,18 @@ func seededPeople(t *testing.T) *Vault {
 		t.Fatal(err)
 	}
 
-	confidence := map[string]float64{"p1": 0.91, "p2": 0.99, "p3": 0.92, "p4": 0.93, "p5": 0.94}
 	var links []models.PhotoFace
-	for _, id := range []string{"p1", "p2", "p3", "p4", "p5"} {
-		links = append(links, models.PhotoFace{PhotoID: id, FaceID: "ana", BBoxMinX: 0.1, BBoxMaxX: 0.2, BBoxMaxY: 0.2, Confidence: confidence[id]})
+	for i := 1; i <= anaPhotos; i++ {
+		id := fmt.Sprintf("p%d", i)
+		conf := 0.91
+		if id == "p2" {
+			conf = 0.99 // her best face
+		}
+		links = append(links, models.PhotoFace{PhotoID: id, FaceID: "ana", BBoxMinX: 0.1, BBoxMaxX: 0.2, BBoxMaxY: 0.2, Confidence: conf})
 	}
 	links = append(links,
 		models.PhotoFace{PhotoID: "p2", FaceID: "luis", BBoxMinX: 0.6, BBoxMaxX: 0.7, BBoxMaxY: 0.2, Confidence: 0.95},
-		models.PhotoFace{PhotoID: "p6", FaceID: "eva", BBoxMinX: 0.1, BBoxMaxX: 0.2, BBoxMaxY: 0.2, Confidence: 0.93},
+		models.PhotoFace{PhotoID: "pe", FaceID: "eva", BBoxMinX: 0.1, BBoxMaxX: 0.2, BBoxMaxY: 0.2, Confidence: 0.93},
 	)
 	if _, err := v.db.NewInsert().Model(&links).Returning("").Exec(ctx); err != nil {
 		t.Fatal(err)
@@ -58,8 +66,8 @@ func TestListPeopleOnlyShowsThoseWithEnoughPhotos(t *testing.T) {
 	if len(people) != 1 || people[0].Id != "ana" {
 		t.Fatalf("only Ana has %d photos or more, got %v", minPhotosToListPerson, people)
 	}
-	if people[0].PhotoCount != 5 || people[0].CoverPhotoId != "p2" {
-		t.Fatalf("Ana should have 5 photos and the cover of her best face (p2): %v", people[0])
+	if people[0].PhotoCount != anaPhotos || people[0].CoverPhotoId != "p2" {
+		t.Fatalf("Ana should have all her photos and the cover of her best face (p2): %v", people[0])
 	}
 }
 
@@ -120,7 +128,7 @@ func TestLabelPerson(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Name != "Ana García" || got.PhotoCount != 5 {
+	if got.Name != "Ana García" || got.PhotoCount != anaPhotos {
 		t.Fatalf("unexpected person after naming: %v", got)
 	}
 
@@ -167,8 +175,8 @@ func TestGetPersonDetails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.Person.Id != "ana" || len(res.Photos) != 5 || res.Photos[0].Id != "p5" || res.Photos[4].Id != "p1" {
-		t.Fatalf("Ana's 5 photos should come newest first, p5 to p1: %v", res.Photos)
+	if res.Person.Id != "ana" || len(res.Photos) != anaPhotos || res.Photos[0].Id != lastAnaPhoto() || res.Photos[anaPhotos-1].Id != "p1" {
+		t.Fatalf("Ana's photos should come newest first, last to p1: %v", res.Photos)
 	}
 	// p1 is in the album, so the album shows up for Ana but not for Luis.
 	if len(res.Albums) != 1 || res.Albums[0].Id != album.Id || res.Albums[0].PhotoCount != 2 {
@@ -191,22 +199,22 @@ func TestDeletingAPhotoRemovesItsFaces(t *testing.T) {
 	v := seededPeople(t)
 	ctx := context.Background()
 
-	if err := storage.NewPhotoRepository(v.db).Delete(ctx, "p5"); err != nil {
+	if err := storage.NewPhotoRepository(v.db).Delete(ctx, lastAnaPhoto()); err != nil {
 		t.Fatal(err)
 	}
-	// Ana falls to 4 photos, below the minimum, so she is no longer listed.
+	// Ana falls one photo below, below the minimum, so she is no longer listed.
 	people, err := v.ListPeople(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(people) != 0 {
-		t.Fatalf("Ana has 4 photos now and should not be listed: %v", people)
+		t.Fatalf("Ana is one photo short now and should not be listed: %v", people)
 	}
 	ana, err := v.GetPersonDetails(ctx, "ana")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(ana.Photos) != 4 {
-		t.Fatalf("Ana should keep her 4 remaining photos: %v", ana.Photos)
+	if len(ana.Photos) != anaPhotos-1 {
+		t.Fatalf("Ana should keep her remaining photos: %v", ana.Photos)
 	}
 }
