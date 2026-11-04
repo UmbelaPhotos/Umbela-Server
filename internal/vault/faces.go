@@ -2,9 +2,12 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"image"
+	"math"
 	"os"
+	"sort"
 	"time"
 	"uuid"
 
@@ -24,9 +27,26 @@ const (
 	faceScanIdle    = 30 * time.Second
 )
 
+const (
+	// A face joins an existing person when it is at least this similar to the
+	// person's centroid. It is the value SFace recommends to tell if two faces
+	// are the same person; a stricter one split people between photos taken
+	// with different light, age or angle.
+	faceMatchThreshold = faces.SuggestThreshold
+
+	// Two people whose centroids are at least this similar are merged into
+	// one. Centroids average many faces, so they are less noisy than a single
+	// face, but a merge cannot be undone, hence a bit above the match value.
+	personMergeThreshold = 0.40
+
+	// Pairs between these two values are reported in the log, to tune them.
+	personNearMissFloor = 0.30
+)
+
 // person is a group of faces of the same individual, as kept in memory.
 type person struct {
 	id       string
+	name     string
 	centroid []float32
 	samples  int
 }
@@ -48,6 +68,11 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 		}
 	}()
 
+	// People split by earlier scans (or by older thresholds) are joined first.
+	if err := v.mergeSimilarPeople(ctx, repo); err != nil && ctx.Err() == nil {
+		fmt.Printf("Face scan: merging people: %v\n", err)
+	}
+
 	scanned, found := 0, 0
 	for {
 		pending, err := repo.PendingPhotos(ctx, faceScanBatch)
@@ -59,6 +84,10 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 			if scanned > 0 {
 				fmt.Printf("Face scan finished: %d photos, %d faces\n", scanned, found)
 				scanned, found = 0, 0
+				if err := v.mergeSimilarPeople(ctx, repo); err != nil && ctx.Err() == nil {
+					fmt.Printf("Face scan: merging people: %v\n", err)
+				}
+				people = nil // merged people are gone: reload before the next scan
 			}
 			select {
 			case <-ctx.Done():
@@ -76,6 +105,9 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("starting the face engine: %w", err)
 			}
+		}
+		if people == nil {
+			var err error
 			people, err = loadPeople(ctx, repo)
 			if err != nil {
 				return err
@@ -125,7 +157,7 @@ func loadPeople(ctx context.Context, repo *storage.FaceRepository) ([]*person, e
 		if err != nil || len(emb) != faces.EmbeddingSize {
 			continue
 		}
-		people = append(people, &person{id: f.ID, centroid: emb, samples: f.Samples})
+		people = append(people, &person{id: f.ID, name: f.PersonName, centroid: emb, samples: f.Samples})
 	}
 	return people, nil
 }
@@ -165,7 +197,7 @@ func (v *Vault) scanPhoto(engine *faces.Engine, people []*person, photo *models.
 		match, sim := bestPerson(people, f.Embedding, taken)
 
 		var personID string
-		if match != nil && sim >= faces.MatchThreshold {
+		if match != nil && sim >= faceMatchThreshold {
 			personID = match.id
 			taken[personID] = true
 			result.UpdatedPeople = append(result.UpdatedPeople, &models.Face{
@@ -253,4 +285,75 @@ func decodeForFaces(data []byte) (image.Image, error) {
 
 func clamp01(v float64) float64 {
 	return max(0, min(1, v))
+}
+
+// mergeSimilarPeople joins the people that are the same individual: the
+// bigger group keeps its id and takes the other's photos. People that appear
+// together in a photo, or that have different names, are never merged.
+func (v *Vault) mergeSimilarPeople(ctx context.Context, repo *storage.FaceRepository) error {
+	people, err := loadPeople(ctx, repo)
+	if err != nil {
+		return err
+	}
+	// Biggest first, so the best known centroid absorbs the small ones.
+	sort.SliceStable(people, func(i, j int) bool { return people[i].samples > people[j].samples })
+
+	gone := make([]bool, len(people))
+	merged := 0
+	for i, a := range people {
+		if gone[i] {
+			continue
+		}
+		for j := i + 1; j < len(people); j++ {
+			b := people[j]
+			if gone[j] {
+				continue
+			}
+			sim := faces.Similarity(a.centroid, b.centroid)
+			if sim < personNearMissFloor {
+				continue
+			}
+			if sim < personMergeThreshold {
+				fmt.Printf("Face scan: people %s and %s are %.3f similar, not merged\n", a.id, b.id, sim)
+				continue
+			}
+			if a.name != "" && b.name != "" && a.name != b.name {
+				continue // the user told them apart
+			}
+			centroid := weightedCentroid(a, b)
+			err := repo.MergePeople(ctx, a.id, b.id, faces.EncodeEmbedding(centroid), a.samples+b.samples)
+			if errors.Is(err, storage.ErrPeopleShareAPhoto) {
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			a.centroid, a.samples = centroid, a.samples+b.samples
+			if a.name == "" {
+				a.name = b.name
+			}
+			gone[j] = true
+			merged++
+		}
+	}
+	if merged > 0 {
+		fmt.Printf("Face scan: merged %d duplicated people\n", merged)
+	}
+	return nil
+}
+
+// weightedCentroid is the normalized mean of the faces of two groups.
+func weightedCentroid(a, b *person) []float32 {
+	out := make([]float32, len(a.centroid))
+	var norm float64
+	for i := range out {
+		out[i] = a.centroid[i]*float32(a.samples) + b.centroid[i]*float32(b.samples)
+		norm += float64(out[i]) * float64(out[i])
+	}
+	if norm = math.Sqrt(norm); norm > 0 {
+		for i := range out {
+			out[i] = float32(float64(out[i]) / norm)
+		}
+	}
+	return out
 }

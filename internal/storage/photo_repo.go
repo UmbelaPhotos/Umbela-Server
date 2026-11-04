@@ -92,7 +92,7 @@ func (r *PhotoRepository) ListPaginated(ctx context.Context, limit int64, offset
 }
 
 // Delete a photo from the DB by its ID, together with its album memberships.
-// An album that used the photo as cover is left without cover.
+// An album or person that used the photo as cover is left without cover.
 // NOTE: It doesnt delete the file; that is responsability of the caller.
 //
 // Input:  ctx, id string
@@ -107,6 +107,9 @@ func (r *PhotoRepository) Delete(ctx context.Context, id string) error {
 		}
 		if _, err := tx.NewUpdate().Model((*models.Album)(nil)).Set("cover_photo_id = ''").Where("cover_photo_id = ?", id).Exec(ctx); err != nil {
 			return fmt.Errorf("clearing covers of photo %s: %w", id, err)
+		}
+		if _, err := tx.NewUpdate().Model((*models.Face)(nil)).Set("cover_photo_id = ''").Where("cover_photo_id = ?", id).Exec(ctx); err != nil {
+			return fmt.Errorf("clearing person covers of photo %s: %w", id, err)
 		}
 		result, err := tx.NewDelete().Model((*models.Photo)(nil)).Where("id = ?", id).Exec(ctx)
 		if err != nil {

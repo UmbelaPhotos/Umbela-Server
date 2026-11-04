@@ -104,7 +104,42 @@ func (r *AlbumRepository) AddPhoto(ctx context.Context, albumID, photoID string)
 	})
 }
 
-// AddPhotoToNamedAlbum puts a photo in the album with that name
+// ErrPhotoNotInAlbum is returned when a cover is picked among photos that are
+// not in the album.
+var ErrPhotoNotInAlbum = errors.New("the photo is not in the album")
+
+// SetCover makes the photo the album's cover. It returns sql.ErrNoRows when
+// the album does not exist and ErrPhotoNotInAlbum when the photo is not in it.
+func (r *AlbumRepository) SetCover(ctx context.Context, albumID, photoID string) error {
+	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		exists, err := tx.NewSelect().Model((*models.Album)(nil)).Where("id = ?", albumID).Exists(ctx)
+		if err != nil {
+			return fmt.Errorf("looking for album %s: %w", albumID, err)
+		}
+		if !exists {
+			return sql.ErrNoRows
+		}
+		inAlbum, err := tx.NewSelect().Model((*models.AlbumPhoto)(nil)).
+			Where("album_id = ? AND photo_id = ?", albumID, photoID).Exists(ctx)
+		if err != nil {
+			return fmt.Errorf("checking photo %s in album %s: %w", photoID, albumID, err)
+		}
+		if !inAlbum {
+			return ErrPhotoNotInAlbum
+		}
+		if _, err := tx.NewUpdate().Model((*models.Album)(nil)).
+			Set("cover_photo_id = ?", photoID).
+			Where("id = ?", albumID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("setting cover of album %s: %w", albumID, err)
+		}
+		return nil
+	})
+}
+
+// AddPhotoToNamedAlbum puts a photo in the album with that name. An album
+// that has no cover yet gets this photo as its cover, so the first photo
+// added is the cover until someone picks another one.
 func (r *AlbumRepository) AddPhotoToNamedAlbum(ctx context.Context, photoID, name string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -127,7 +162,16 @@ func (r *AlbumRepository) AddPhotoToNamedAlbum(ctx context.Context, photoID, nam
 		} else if err != nil {
 			return fmt.Errorf("looking for album %q: %w", name, err)
 		}
-		return linkPhoto(ctx, tx, albumID, photoID)
+		if err := linkPhoto(ctx, tx, albumID, photoID); err != nil {
+			return err
+		}
+		if _, err := tx.NewUpdate().Model((*models.Album)(nil)).
+			Set("cover_photo_id = ?", photoID).
+			Where("id = ? AND COALESCE(cover_photo_id, '') = ''", albumID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("setting the first cover of album %q: %w", name, err)
+		}
+		return nil
 	})
 }
 

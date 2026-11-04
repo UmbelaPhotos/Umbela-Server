@@ -156,3 +156,62 @@ func TestAddPhotoToNamedAlbumConcurrently(t *testing.T) {
 		t.Fatalf("want one album with 20 photos, got %v", list)
 	}
 }
+
+// The first photo added by name becomes the cover; later photos do not
+// replace it, and an album without cover gets one.
+func TestAddPhotoToNamedAlbumSetsFirstCover(t *testing.T) {
+	v := seededVault(t, []models.Photo{
+		{ID: "p1", Hash: "h1", FilePath: "x", CapturedAt: 1},
+		{ID: "p2", Hash: "h2", FilePath: "x", CapturedAt: 2},
+	})
+	ctx := context.Background()
+	albums := storage.NewAlbumRepository(v.db)
+	for _, id := range []string{"p1", "p2"} {
+		if err := albums.AddPhotoToNamedAlbum(ctx, id, "Viaje"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	list, err := v.ListAlbums(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].CoverPhotoId != "p1" {
+		t.Fatalf("the first photo should be the cover: %+v", list)
+	}
+}
+
+func TestSetAlbumCover(t *testing.T) {
+	v := seededVault(t, []models.Photo{
+		{ID: "p1", Hash: "h1", FilePath: "x", CapturedAt: 1},
+		{ID: "p2", Hash: "h2", FilePath: "x", CapturedAt: 2},
+		{ID: "p3", Hash: "h3", FilePath: "x", CapturedAt: 3},
+	})
+	ctx := context.Background()
+	album, err := v.CreateAlbum(ctx, "Viaje")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"p1", "p2"} {
+		if err := v.AddPhotoToAlbum(ctx, id, album.Id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := v.SetAlbumCover(ctx, album.Id, "p3"); !errors.Is(err, ErrPhotoNotInAlbum) {
+		t.Fatalf("a photo outside the album: got %v", err)
+	}
+	if _, err := v.SetAlbumCover(ctx, "nope", "p1"); !errors.Is(err, ErrAlbumNotFound) {
+		t.Fatalf("missing album: got %v", err)
+	}
+	got, err := v.SetAlbumCover(ctx, album.Id, "p1")
+	if err != nil || got.CoverPhotoId != "p1" || got.PhotoCount != 2 {
+		t.Fatalf("cover = %+v, err %v", got, err)
+	}
+	// Deleting the cover photo leaves the album with its newest photo.
+	if err := v.DeletePhoto(ctx, "p1"); err != nil {
+		t.Fatal(err)
+	}
+	list, _ := v.ListAlbums(ctx)
+	if list[0].CoverPhotoId != "p2" {
+		t.Fatalf("after deleting the cover: %+v", list[0])
+	}
+}

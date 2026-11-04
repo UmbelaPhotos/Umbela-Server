@@ -114,3 +114,23 @@ func (v *Vault) GetPersonDetails(ctx context.Context, personID string) (*pb.GetP
 	}
 	return res, nil
 }
+
+// SetPersonCover picks the photo that represents a person. They have to
+// appear in it.
+func (v *Vault) SetPersonCover(ctx context.Context, personID, photoID string) (*pb.PersonSummary, error) {
+	repo := storage.NewFaceRepository(v.db)
+	if err := repo.SetPersonCover(ctx, personID, photoID); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrPersonNotFound
+		case errors.Is(err, storage.ErrPhotoNotOfPerson):
+			return nil, ErrPhotoNotOfPerson
+		}
+		return nil, err
+	}
+	row, err := repo.GetPerson(ctx, personID)
+	if err != nil {
+		return nil, err
+	}
+	return personSummary(*row), nil
+}

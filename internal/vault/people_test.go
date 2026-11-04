@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"testing"
+	"umbela-server/internal/faces"
 
 	"umbela-server/internal/models"
 	"umbela-server/internal/storage"
@@ -216,5 +218,108 @@ func TestDeletingAPhotoRemovesItsFaces(t *testing.T) {
 	}
 	if len(ana.Photos) != anaPhotos-1 {
 		t.Fatalf("Ana should keep her remaining photos: %v", ana.Photos)
+	}
+}
+
+func TestSetPersonCover(t *testing.T) {
+	v := seededPeople(t)
+	ctx := context.Background()
+
+	if _, err := v.SetPersonCover(ctx, "nope", "p1"); !errors.Is(err, ErrPersonNotFound) {
+		t.Fatalf("missing person: got %v", err)
+	}
+	if _, err := v.SetPersonCover(ctx, "luis", "p1"); !errors.Is(err, ErrPhotoNotOfPerson) {
+		t.Fatalf("a photo Luis is not in: got %v", err)
+	}
+	got, err := v.SetPersonCover(ctx, "ana", "p1")
+	if err != nil || got.CoverPhotoId != "p1" {
+		t.Fatalf("cover = %+v, err %v", got, err)
+	}
+	people, _ := v.ListPeople(ctx)
+	if people[0].CoverPhotoId != "p1" {
+		t.Fatalf("the list should use the picked cover: %v", people[0])
+	}
+	// Deleting that photo goes back to her best face.
+	if err := v.DeletePhoto(ctx, "p1"); err != nil {
+		t.Fatal(err)
+	}
+	row, err := storage.NewFaceRepository(v.db).GetPerson(ctx, "ana")
+	if err != nil || row.CoverPhotoID != "p2" {
+		t.Fatalf("after deleting the cover: %+v, err %v", row, err)
+	}
+}
+
+// emb builds a normalized embedding pointing mostly along axis, tilted
+// towards axis2 by tilt.
+func emb(axis, axis2 int, tilt float32) []byte {
+	e := make([]float32, faces.EmbeddingSize)
+	e[axis] = 1
+	e[axis2] += tilt
+	var n float64
+	for _, x := range e {
+		n += float64(x) * float64(x)
+	}
+	n = math.Sqrt(n)
+	for i := range e {
+		e[i] = float32(float64(e[i]) / n)
+	}
+	return faces.EncodeEmbedding(e)
+}
+
+func TestMergeSimilarPeople(t *testing.T) {
+	var photos []models.Photo
+	for i := 1; i <= 6; i++ {
+		photos = append(photos, models.Photo{ID: fmt.Sprintf("p%d", i), Hash: fmt.Sprintf("h%d", i), FilePath: "x", CapturedAt: int64(i)})
+	}
+	v := seededVault(t, photos)
+	ctx := context.Background()
+
+	people := []models.Face{
+		{ID: "ana", Embedding: emb(0, 1, 0), Samples: 3},
+		{ID: "ana2", PersonName: "Ana", Embedding: emb(0, 1, 0.2), Samples: 1}, // same person, named
+		{ID: "luis", Embedding: emb(5, 6, 0), Samples: 2},                      // someone else
+		{ID: "ana3", Embedding: emb(0, 1, 0.1), Samples: 1},                    // same, but shares photos with ana and bea
+		{ID: "bea", PersonName: "Bea", Embedding: emb(0, 1, 0.05), Samples: 1}, // looks like Ana, other name
+	}
+	if _, err := v.db.NewInsert().Model(&people).Returning("").Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+	links := []models.PhotoFace{
+		{PhotoID: "p1", FaceID: "ana"}, {PhotoID: "p2", FaceID: "ana"}, {PhotoID: "p3", FaceID: "ana"},
+		{PhotoID: "p4", FaceID: "ana2"}, {PhotoID: "p5", FaceID: "luis"}, {PhotoID: "p6", FaceID: "luis"},
+		{PhotoID: "p1", FaceID: "ana3"}, {PhotoID: "p4", FaceID: "ana3"},
+		{PhotoID: "p4", FaceID: "bea"},
+	}
+	if _, err := v.db.NewInsert().Model(&links).Returning("").Exec(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := v.mergeSimilarPeople(ctx, storage.NewFaceRepository(v.db)); err != nil {
+		t.Fatal(err)
+	}
+
+	var left []models.Face
+	if err := v.db.NewSelect().Model(&left).Column("id", "person_name", "samples").Order("id").Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]models.Face{}
+	for _, f := range left {
+		got[f.ID] = f
+	}
+	// ana absorbed ana2 and took its name; luis, bea and ana3 stay apart.
+	if _, ok := got["ana2"]; ok {
+		t.Fatalf("ana2 should have been merged into ana: %+v", left)
+	}
+	if got["ana"].PersonName != "Ana" || got["ana"].Samples != 4 {
+		t.Fatalf("ana after the merge: %+v", got["ana"])
+	}
+	for _, id := range []string{"luis", "bea", "ana3"} {
+		if _, ok := got[id]; !ok {
+			t.Fatalf("%s should not have been merged: %+v", id, left)
+		}
+	}
+	n, _ := v.db.NewSelect().Model((*models.PhotoFace)(nil)).Where("face_id = 'ana'").Count(ctx)
+	if n != 4 {
+		t.Fatalf("ana should have her 3 photos plus ana2's, has %d", n)
 	}
 }

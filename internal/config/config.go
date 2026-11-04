@@ -29,7 +29,6 @@ type VaultConfig struct {
 	DBPath       string `json:"db_path"`
 	ThumbWidth   int    `json:"thumb_width"`
 	ThumbHeight  int    `json:"thumb_height"`
-	ZipDepth	 int	`json:"zip_depth"`
 }
 
 // DefaultConfig returns the configuration with the user home paths.
@@ -55,7 +54,6 @@ func DefaultConfig(userPath string) (*Config, error) {
 			ImageDir:    filepath.Join(userPath, "images"),
 			ThumbsDir:   filepath.Join(userPath, "thumbs"),
 			DBPath:      filepath.Join(userPath, "umbela.db"),
-			ZipDepth:    3,
 		},
 		Server: ServerConfig{
 			APIPort:     41110,

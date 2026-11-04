@@ -20,9 +20,11 @@ service PhotoService {
   rpc ListPeople(ListPeopleRequest) returns (ListPeopleResponse);
   rpc LabelPerson(LabelPersonRequest) returns (LabelPersonResponse);
   rpc GetPersonDetails(GetPersonDetailsRequest) returns (GetPersonDetailsResponse);
+  rpc SetPersonCover(SetPersonCoverRequest) returns (SetPersonCoverResponse);
 
   rpc ListAlbums(ListAlbumsRequest) returns (ListAlbumsResponse);
   rpc CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse);
+  rpc SetAlbumCover(SetAlbumCoverRequest) returns (SetAlbumCoverResponse);
 
   rpc ListPlaces(ListPlacesRequest) returns (ListPlacesResponse);
 }
@@ -147,6 +149,22 @@ message LabelPersonRequest {
 }
 message LabelPersonResponse {
   PersonSummary person = 1;
+}
+
+message SetPersonCoverRequest {
+  string person_id = 1;
+  string photo_id = 2;
+}
+message SetPersonCoverResponse {
+  PersonSummary person = 1;
+}
+
+message SetAlbumCoverRequest {
+  string album_id = 1;
+  string photo_id = 2;
+}
+message SetAlbumCoverResponse {
+  AlbumSummary album = 1;
 }
 
 message AlbumSummary {

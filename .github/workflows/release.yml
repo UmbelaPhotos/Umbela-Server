@@ -18,7 +18,7 @@ jobs:
       # Must match the version onnxruntime_go in go.mod is built for.
       ORT_VERSION: "1.31.0"
     steps:
-      - name: Dependencias de compilación
+      - name: Compilation dependencies
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
@@ -31,7 +31,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Librería ONNX Runtime
+      - name: ONNX Runtime Library
         run: |
           mkdir -p dist
           f=onnxruntime-linux-${{ matrix.ort_arch }}-${ORT_VERSION}.tgz
@@ -41,16 +41,16 @@ jobs:
           # Fixed name: nfpm does not expand variables in contents paths.
           cp -L "onnxruntime-linux-${{ matrix.ort_arch }}-${ORT_VERSION}/lib/libonnxruntime.so.${ORT_VERSION}" dist/libonnxruntime.so
 
-      - name: Compilar
+      - name: Compile
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           mkdir -p dist
           go build -trimpath -ldflags "-s -w" -o dist/umbela-cli ./cmd/umbela-cli
 
-      - name: Instalar nfpm
+      - name: Install nfpm
         run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
 
-      - name: Empaquetar
+      - name: Packaging
         env:
           ARCH: ${{ matrix.arch }}
           VERSION: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v0.0.0-dev' }}
@@ -89,7 +89,7 @@ jobs:
       CGO_ENABLED: "1"
       ORT_VERSION: "1.31.0"
     steps:
-      - name: Dependencias de compilación
+      - name: Compilation dependencies
         run: brew install vips pkgconf
 
       - uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Librería ONNX Runtime
+      - name: ONNX Runtime Library
         if: matrix.ort_sha != ''
         run: |
           f=onnxruntime-osx-arm64-${ORT_VERSION}.tgz
@@ -107,7 +107,7 @@ jobs:
           tar xzf "$f"
           cp -L "onnxruntime-osx-arm64-${ORT_VERSION}/lib/libonnxruntime.${ORT_VERSION}.dylib" .
 
-      - name: Compilar
+      - name: Compilation
         run: |
           mkdir -p dist
           go build -trimpath -ldflags "-s -w" -o umbela-cli ./cmd/umbela-cli
@@ -155,12 +155,12 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Compilar
+      - name: Compilation
         run: |
           mkdir -p dist stage
           go build -v -trimpath -ldflags "-s -w" -o stage/umbela-cli.exe ./cmd/umbela-cli
 
-      - name: DLL de las que depende umbela.exe
+      - name: umbela.exe dll's
         run: |
           # Every non-Windows DLL it needs, directly or through another DLL.
           ldd stage/umbela-cli.exe | grep -v -i "/c/windows" | awk '/=>/ {print $3}' | sort -u > dlls.txt
@@ -170,7 +170,7 @@ jobs:
             cp "$dll" stage/
           done < dlls.txt
 
-      - name: Librería ONNX Runtime
+      - name: ONNX Runtime Library
         run: |
           f=onnxruntime-win-x64-${ORT_VERSION}.zip
           curl -fsSL -o "$f" "https://github.com/microsoft/onnxruntime/releases/download/v${ORT_VERSION}/$f"
@@ -190,7 +190,7 @@ jobs:
           cp tor-bundle/docs/*.txt stage/licenses/
           cp LICENSE stage/
 
-      - name: Prueba en un entorno limpio
+      - name: Test
         shell: pwsh
         run: |
           # Only the Windows folders in the PATH, as on a PC without MSYS2.
@@ -200,7 +200,7 @@ jobs:
           & .\stage\tor\tor.exe --version
           if ($LASTEXITCODE -ne 0) { throw "tor.exe does not start" }
 
-      - name: Comprimir
+      - name: Zip
         shell: pwsh
         run: Compress-Archive -Path stage\* -DestinationPath dist\umbela-cli-windows-amd64.zip
 

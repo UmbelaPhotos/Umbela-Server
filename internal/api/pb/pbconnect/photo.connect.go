@@ -65,11 +65,17 @@ const (
 	// PhotoServiceGetPersonDetailsProcedure is the fully-qualified name of the PhotoService's
 	// GetPersonDetails RPC.
 	PhotoServiceGetPersonDetailsProcedure = "/umbela.v1.PhotoService/GetPersonDetails"
+	// PhotoServiceSetPersonCoverProcedure is the fully-qualified name of the PhotoService's
+	// SetPersonCover RPC.
+	PhotoServiceSetPersonCoverProcedure = "/umbela.v1.PhotoService/SetPersonCover"
 	// PhotoServiceListAlbumsProcedure is the fully-qualified name of the PhotoService's ListAlbums RPC.
 	PhotoServiceListAlbumsProcedure = "/umbela.v1.PhotoService/ListAlbums"
 	// PhotoServiceCreateAlbumProcedure is the fully-qualified name of the PhotoService's CreateAlbum
 	// RPC.
 	PhotoServiceCreateAlbumProcedure = "/umbela.v1.PhotoService/CreateAlbum"
+	// PhotoServiceSetAlbumCoverProcedure is the fully-qualified name of the PhotoService's
+	// SetAlbumCover RPC.
+	PhotoServiceSetAlbumCoverProcedure = "/umbela.v1.PhotoService/SetAlbumCover"
 	// PhotoServiceListPlacesProcedure is the fully-qualified name of the PhotoService's ListPlaces RPC.
 	PhotoServiceListPlacesProcedure = "/umbela.v1.PhotoService/ListPlaces"
 )
@@ -88,8 +94,10 @@ var (
 	photoServiceListPeopleMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListPeople")
 	photoServiceLabelPersonMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("LabelPerson")
 	photoServiceGetPersonDetailsMethodDescriptor   = photoServiceServiceDescriptor.Methods().ByName("GetPersonDetails")
+	photoServiceSetPersonCoverMethodDescriptor     = photoServiceServiceDescriptor.Methods().ByName("SetPersonCover")
 	photoServiceListAlbumsMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListAlbums")
 	photoServiceCreateAlbumMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("CreateAlbum")
+	photoServiceSetAlbumCoverMethodDescriptor      = photoServiceServiceDescriptor.Methods().ByName("SetAlbumCover")
 	photoServiceListPlacesMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListPlaces")
 )
 
@@ -109,8 +117,10 @@ type PhotoServiceClient interface {
 	ListPeople(context.Context, *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error)
 	LabelPerson(context.Context, *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error)
 	GetPersonDetails(context.Context, *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error)
+	SetPersonCover(context.Context, *connect.Request[pb.SetPersonCoverRequest]) (*connect.Response[pb.SetPersonCoverResponse], error)
 	ListAlbums(context.Context, *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error)
 	CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error)
+	SetAlbumCover(context.Context, *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error)
 	ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error)
 }
 
@@ -190,6 +200,12 @@ func NewPhotoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(photoServiceGetPersonDetailsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		setPersonCover: connect.NewClient[pb.SetPersonCoverRequest, pb.SetPersonCoverResponse](
+			httpClient,
+			baseURL+PhotoServiceSetPersonCoverProcedure,
+			connect.WithSchema(photoServiceSetPersonCoverMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		listAlbums: connect.NewClient[pb.ListAlbumsRequest, pb.ListAlbumsResponse](
 			httpClient,
 			baseURL+PhotoServiceListAlbumsProcedure,
@@ -200,6 +216,12 @@ func NewPhotoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+PhotoServiceCreateAlbumProcedure,
 			connect.WithSchema(photoServiceCreateAlbumMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		setAlbumCover: connect.NewClient[pb.SetAlbumCoverRequest, pb.SetAlbumCoverResponse](
+			httpClient,
+			baseURL+PhotoServiceSetAlbumCoverProcedure,
+			connect.WithSchema(photoServiceSetAlbumCoverMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		listPlaces: connect.NewClient[pb.ListPlacesRequest, pb.ListPlacesResponse](
@@ -224,8 +246,10 @@ type photoServiceClient struct {
 	listPeople         *connect.Client[pb.ListPeopleRequest, pb.ListPeopleResponse]
 	labelPerson        *connect.Client[pb.LabelPersonRequest, pb.LabelPersonResponse]
 	getPersonDetails   *connect.Client[pb.GetPersonDetailsRequest, pb.GetPersonDetailsResponse]
+	setPersonCover     *connect.Client[pb.SetPersonCoverRequest, pb.SetPersonCoverResponse]
 	listAlbums         *connect.Client[pb.ListAlbumsRequest, pb.ListAlbumsResponse]
 	createAlbum        *connect.Client[pb.CreateAlbumRequest, pb.CreateAlbumResponse]
+	setAlbumCover      *connect.Client[pb.SetAlbumCoverRequest, pb.SetAlbumCoverResponse]
 	listPlaces         *connect.Client[pb.ListPlacesRequest, pb.ListPlacesResponse]
 }
 
@@ -284,6 +308,11 @@ func (c *photoServiceClient) GetPersonDetails(ctx context.Context, req *connect.
 	return c.getPersonDetails.CallUnary(ctx, req)
 }
 
+// SetPersonCover calls umbela.v1.PhotoService.SetPersonCover.
+func (c *photoServiceClient) SetPersonCover(ctx context.Context, req *connect.Request[pb.SetPersonCoverRequest]) (*connect.Response[pb.SetPersonCoverResponse], error) {
+	return c.setPersonCover.CallUnary(ctx, req)
+}
+
 // ListAlbums calls umbela.v1.PhotoService.ListAlbums.
 func (c *photoServiceClient) ListAlbums(ctx context.Context, req *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {
 	return c.listAlbums.CallUnary(ctx, req)
@@ -292,6 +321,11 @@ func (c *photoServiceClient) ListAlbums(ctx context.Context, req *connect.Reques
 // CreateAlbum calls umbela.v1.PhotoService.CreateAlbum.
 func (c *photoServiceClient) CreateAlbum(ctx context.Context, req *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error) {
 	return c.createAlbum.CallUnary(ctx, req)
+}
+
+// SetAlbumCover calls umbela.v1.PhotoService.SetAlbumCover.
+func (c *photoServiceClient) SetAlbumCover(ctx context.Context, req *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error) {
+	return c.setAlbumCover.CallUnary(ctx, req)
 }
 
 // ListPlaces calls umbela.v1.PhotoService.ListPlaces.
@@ -315,8 +349,10 @@ type PhotoServiceHandler interface {
 	ListPeople(context.Context, *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error)
 	LabelPerson(context.Context, *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error)
 	GetPersonDetails(context.Context, *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error)
+	SetPersonCover(context.Context, *connect.Request[pb.SetPersonCoverRequest]) (*connect.Response[pb.SetPersonCoverResponse], error)
 	ListAlbums(context.Context, *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error)
 	CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error)
+	SetAlbumCover(context.Context, *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error)
 	ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error)
 }
 
@@ -392,6 +428,12 @@ func NewPhotoServiceHandler(svc PhotoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(photoServiceGetPersonDetailsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	photoServiceSetPersonCoverHandler := connect.NewUnaryHandler(
+		PhotoServiceSetPersonCoverProcedure,
+		svc.SetPersonCover,
+		connect.WithSchema(photoServiceSetPersonCoverMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	photoServiceListAlbumsHandler := connect.NewUnaryHandler(
 		PhotoServiceListAlbumsProcedure,
 		svc.ListAlbums,
@@ -402,6 +444,12 @@ func NewPhotoServiceHandler(svc PhotoServiceHandler, opts ...connect.HandlerOpti
 		PhotoServiceCreateAlbumProcedure,
 		svc.CreateAlbum,
 		connect.WithSchema(photoServiceCreateAlbumMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceSetAlbumCoverHandler := connect.NewUnaryHandler(
+		PhotoServiceSetAlbumCoverProcedure,
+		svc.SetAlbumCover,
+		connect.WithSchema(photoServiceSetAlbumCoverMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	photoServiceListPlacesHandler := connect.NewUnaryHandler(
@@ -434,10 +482,14 @@ func NewPhotoServiceHandler(svc PhotoServiceHandler, opts ...connect.HandlerOpti
 			photoServiceLabelPersonHandler.ServeHTTP(w, r)
 		case PhotoServiceGetPersonDetailsProcedure:
 			photoServiceGetPersonDetailsHandler.ServeHTTP(w, r)
+		case PhotoServiceSetPersonCoverProcedure:
+			photoServiceSetPersonCoverHandler.ServeHTTP(w, r)
 		case PhotoServiceListAlbumsProcedure:
 			photoServiceListAlbumsHandler.ServeHTTP(w, r)
 		case PhotoServiceCreateAlbumProcedure:
 			photoServiceCreateAlbumHandler.ServeHTTP(w, r)
+		case PhotoServiceSetAlbumCoverProcedure:
+			photoServiceSetAlbumCoverHandler.ServeHTTP(w, r)
 		case PhotoServiceListPlacesProcedure:
 			photoServiceListPlacesHandler.ServeHTTP(w, r)
 		default:
@@ -493,12 +545,20 @@ func (UnimplementedPhotoServiceHandler) GetPersonDetails(context.Context, *conne
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.GetPersonDetails is not implemented"))
 }
 
+func (UnimplementedPhotoServiceHandler) SetPersonCover(context.Context, *connect.Request[pb.SetPersonCoverRequest]) (*connect.Response[pb.SetPersonCoverResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.SetPersonCover is not implemented"))
+}
+
 func (UnimplementedPhotoServiceHandler) ListAlbums(context.Context, *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.ListAlbums is not implemented"))
 }
 
 func (UnimplementedPhotoServiceHandler) CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.CreateAlbum is not implemented"))
+}
+
+func (UnimplementedPhotoServiceHandler) SetAlbumCover(context.Context, *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.SetAlbumCover is not implemented"))
 }
 
 func (UnimplementedPhotoServiceHandler) ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error) {

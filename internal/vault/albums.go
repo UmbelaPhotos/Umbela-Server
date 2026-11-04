@@ -93,3 +93,32 @@ func (v *Vault) DeletePhoto(ctx context.Context, photoID string) error {
 	}
 	return nil
 }
+
+// SetAlbumCover picks the photo that represents the album. It has to be in it.
+func (v *Vault) SetAlbumCover(ctx context.Context, albumID, photoID string) (*pb.AlbumSummary, error) {
+	albums := storage.NewAlbumRepository(v.db)
+	if err := albums.SetCover(ctx, albumID, photoID); err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrAlbumNotFound
+		case errors.Is(err, storage.ErrPhotoNotInAlbum):
+			return nil, ErrPhotoNotInAlbum
+		}
+		return nil, err
+	}
+	rows, err := albums.ListWithCounts(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, r := range rows {
+		if r.ID == albumID {
+			return &pb.AlbumSummary{
+				Id:           r.ID,
+				Name:         r.Name,
+				PhotoCount:   int32(r.PhotoCount),
+				CoverPhotoId: r.CoverPhotoID,
+			}, nil
+		}
+	}
+	return nil, ErrAlbumNotFound
+}

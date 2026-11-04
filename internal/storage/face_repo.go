@@ -57,7 +57,7 @@ func (r *FaceRepository) CountPending(ctx context.Context) (int, error) {
 // ListPeople returns every person with the centroid of their embeddings.
 func (r *FaceRepository) ListPeople(ctx context.Context) ([]*models.Face, error) {
 	var people []*models.Face
-	if err := r.db.NewSelect().Model(&people).Column("id", "embedding", "samples").Scan(ctx); err != nil {
+	if err := r.db.NewSelect().Model(&people).Column("id", "person_name", "cover_photo_id", "embedding", "samples").Scan(ctx); err != nil {
 		return nil, fmt.Errorf("listing people: %w", err)
 	}
 	return people, nil
@@ -94,6 +94,57 @@ func (r *FaceRepository) SaveScan(ctx context.Context, s ScanResult) error {
 	})
 }
 
+// ErrPeopleShareAPhoto is returned when two people cannot be merged because
+// they appear together in a photo, so they are different people.
+var ErrPeopleShareAPhoto = errors.New("the two people appear in the same photo")
+
+// MergePeople folds the person drop into keep: its photos move to keep, keep
+// takes the given centroid and samples, inherits the name and cover it lacks,
+// and drop is deleted. All or nothing.
+func (r *FaceRepository) MergePeople(ctx context.Context, keepID, dropID string, embedding []byte, samples int) error {
+	if keepID == dropID {
+		return nil
+	}
+	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var together int
+		if err := tx.NewSelect().
+			TableExpr("photo_faces AS a").
+			ColumnExpr("COUNT(*)").
+			Join("JOIN photo_faces AS b ON b.photo_id = a.photo_id").
+			Where("a.face_id = ? AND b.face_id = ?", keepID, dropID).
+			Scan(ctx, &together); err != nil {
+			return fmt.Errorf("comparing people %s and %s: %w", keepID, dropID, err)
+		}
+		if together > 0 {
+			return ErrPeopleShareAPhoto
+		}
+
+		var drop models.Face
+		if err := tx.NewSelect().Model(&drop).Column("person_name", "cover_photo_id").Where("id = ?", dropID).Scan(ctx); err != nil {
+			return fmt.Errorf("reading person %s: %w", dropID, err)
+		}
+		if _, err := tx.NewUpdate().Model((*models.PhotoFace)(nil)).
+			Set("face_id = ?", keepID).
+			Where("face_id = ?", dropID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("moving the photos of person %s: %w", dropID, err)
+		}
+		if _, err := tx.NewUpdate().Model((*models.Face)(nil)).
+			Set("embedding = ?", embedding).
+			Set("samples = ?", samples).
+			Set("person_name = CASE WHEN COALESCE(person_name, '') = '' THEN ? ELSE person_name END", drop.PersonName).
+			Set("cover_photo_id = CASE WHEN COALESCE(cover_photo_id, '') = '' THEN ? ELSE cover_photo_id END", drop.CoverPhotoID).
+			Where("id = ?", keepID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("updating person %s: %w", keepID, err)
+		}
+		if _, err := tx.NewDelete().Model((*models.Face)(nil)).Where("id = ?", dropID).Exec(ctx); err != nil {
+			return fmt.Errorf("deleting person %s: %w", dropID, err)
+		}
+		return nil
+	})
+}
+
 // PersonRow is a person as the people list shows it.
 type PersonRow struct {
 	ID           string `bun:"id"`
@@ -103,13 +154,14 @@ type PersonRow struct {
 }
 
 // personSelect is the select list shared by the person queries. The cover is
-// the photo where the person's face was detected with the most confidence.
+// the photo the user picked, or else the photo where the person's face was
+// detected with the most confidence.
 func personSelect(db *bun.DB) *bun.SelectQuery {
 	return db.NewSelect().
 		TableExpr("faces AS f").
 		ColumnExpr("f.id AS id, COALESCE(f.person_name, '') AS name").
 		ColumnExpr("(SELECT COUNT(DISTINCT pf.photo_id) FROM photo_faces pf WHERE pf.face_id = f.id) AS photo_count").
-		ColumnExpr(`COALESCE((
+		ColumnExpr(`COALESCE(NULLIF(f.cover_photo_id, ''), (
 			SELECT pf.photo_id FROM photo_faces pf WHERE pf.face_id = f.id
 			ORDER BY pf.confidence DESC, pf.photo_id DESC LIMIT 1
 		), '') AS cover_photo_id`)
@@ -158,6 +210,40 @@ func (r *FaceRepository) SetPersonName(ctx context.Context, id, name string) err
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+// ErrPhotoNotOfPerson is returned when a cover is picked among photos the
+// person does not appear in.
+var ErrPhotoNotOfPerson = errors.New("the person does not appear in that photo")
+
+// SetPersonCover makes the photo the person's picture. It returns
+// sql.ErrNoRows when the person does not exist and ErrPhotoNotOfPerson when
+// they do not appear in the photo.
+func (r *FaceRepository) SetPersonCover(ctx context.Context, personID, photoID string) error {
+	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		exists, err := tx.NewSelect().Model((*models.Face)(nil)).Where("id = ?", personID).Exists(ctx)
+		if err != nil {
+			return fmt.Errorf("looking for person %s: %w", personID, err)
+		}
+		if !exists {
+			return sql.ErrNoRows
+		}
+		appears, err := tx.NewSelect().Model((*models.PhotoFace)(nil)).
+			Where("face_id = ? AND photo_id = ?", personID, photoID).Exists(ctx)
+		if err != nil {
+			return fmt.Errorf("checking photo %s of person %s: %w", photoID, personID, err)
+		}
+		if !appears {
+			return ErrPhotoNotOfPerson
+		}
+		if _, err := tx.NewUpdate().Model((*models.Face)(nil)).
+			Set("cover_photo_id = ?", photoID).
+			Where("id = ?", personID).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("setting cover of person %s: %w", personID, err)
+		}
+		return nil
+	})
 }
 
 // PersonPhotos returns every photo the person appears in, newest first.

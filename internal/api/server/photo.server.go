@@ -237,3 +237,39 @@ func (s *PhotoServer) CreateAlbum(ctx context.Context, req *connect.Request[pb.C
 func (s *PhotoServer) ListPlaces(ctx context.Context, req *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("no implementado aún"))
 }
+
+func (s *PhotoServer) SetPersonCover(ctx context.Context, req *connect.Request[pb.SetPersonCoverRequest]) (*connect.Response[pb.SetPersonCoverResponse], error) {
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	person, err := s.v.SetPersonCover(ctx, req.Msg.GetPersonId(), req.Msg.GetPhotoId())
+	if errors.Is(err, vault.ErrPersonNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	if errors.Is(err, vault.ErrPhotoNotOfPerson) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.SetPersonCoverResponse{Person: person}), nil
+}
+
+func (s *PhotoServer) SetAlbumCover(ctx context.Context, req *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error) {
+	if !s.keyAgent.IsUnlocked() {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+
+	album, err := s.v.SetAlbumCover(ctx, req.Msg.GetAlbumId(), req.Msg.GetPhotoId())
+	if errors.Is(err, vault.ErrAlbumNotFound) {
+		return nil, connect.NewError(connect.CodeNotFound, err)
+	}
+	if errors.Is(err, vault.ErrPhotoNotInAlbum) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.SetAlbumCoverResponse{Album: album}), nil
+}

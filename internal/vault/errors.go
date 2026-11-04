@@ -25,3 +25,9 @@ var ErrPersonNotFound = errors.New("person not found")
 
 // ErrInvalidPersonName is returned when a person name is too long.
 var ErrInvalidPersonName = errors.New("invalid person name")
+
+// ErrPhotoNotInAlbum is returned when an album cover is not a photo of the album.
+var ErrPhotoNotInAlbum = errors.New("photo is not in the album")
+
+// ErrPhotoNotOfPerson is returned when a person's cover is a photo they are not in.
+var ErrPhotoNotOfPerson = errors.New("person is not in the photo")
