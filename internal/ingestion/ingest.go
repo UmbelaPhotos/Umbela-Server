@@ -23,7 +23,7 @@ type Result struct {
 }
 
 // IngestPhotos orchestrate the concurrent processing pipeline.
-func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Processor, repo *storage.PhotoRepository, config *config.VaultConfig, dryRun bool, move bool) {
+func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Processor, repo *storage.PhotoRepository, albums *storage.AlbumRepository, config *config.VaultConfig, dryRun bool, move bool) {
 	fmt.Printf("\nStarting ingest\n")
 	total := len(groups)
 	jobs := make(chan *FileGroup, 100)
@@ -38,7 +38,7 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 				if ctx.Err() != nil {
 					return
 				}
-				photo, err := processGroup(ctx, group, processor, repo, config.ImageDir, dryRun, move, config.DEK)
+				photo, err := processGroup(ctx, group, processor, repo, albums, config.ImageDir, dryRun, move, config.DEK)
 				results <- Result{Group: group, Photo: photo, Err: err}
 			}
 		})
@@ -87,7 +87,7 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 		bar.Describe(fmt.Sprintf("[white]Ingesting[reset] ([green]%dP[reset]/[dark_gray]%dS[reset]/[light_red]%dF[reset])", processed, skipped, failed))
 	}
 
-	fmt.Println("\n") 
+	fmt.Print("\n\n")
 
 	if len(errLogs) > 0 {
 		for _, errStr := range errLogs {
@@ -99,7 +99,7 @@ func IngestPhotos(ctx context.Context, groups []*FileGroup, processor *image.Pro
 }
 
 // processGroup life cycle of a photo being processed
-func processGroup(ctx context.Context, group *FileGroup, processor *image.Processor, repo *storage.PhotoRepository, imagesDir string, dryRun, move bool, DEK []byte) (*models.Photo, error) {
+func processGroup(ctx context.Context, group *FileGroup, processor *image.Processor, repo *storage.PhotoRepository, albums *storage.AlbumRepository, imagesDir string, dryRun, move bool, DEK []byte) (*models.Photo, error) {
 	imagePath := group.ImagePaths[0]
 	if imagePath == "" {
 		return nil, nil
@@ -115,6 +115,11 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 		return nil, fmt.Errorf("verificando duplicado: %w", err)
 	}
 	if existing != nil {
+		if group.Album != "" && !dryRun {
+			if err := albums.AddPhotoToNamedAlbum(ctx, existing.ID, group.Album); err != nil {
+				return nil, err
+			}
+		}
 		return nil, nil
 	}
 
@@ -172,6 +177,12 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 		// Saves to db
 		if err := repo.Save(ctx, photo); err != nil {
 			return nil, fmt.Errorf("guardando en BD: %w", err)
+		}
+
+		if group.Album != "" {
+			if err := albums.AddPhotoToNamedAlbum(ctx, photo.ID, group.Album); err != nil {
+				return nil, err
+			}
 		}
 	}
 

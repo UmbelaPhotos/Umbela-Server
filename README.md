@@ -62,7 +62,7 @@ If you prefer the plain download (`umbela-cli-linux-<arch>.tar.gz`), install lib
 
 ```bash
 tar -xzf umbela-cli-linux-amd64.tar.gz
-sudo mv umbela /usr/local/bin/
+sudo mv umbela-cli /usr/local/bin/
 sudo mkdir -p /usr/local/lib/umbela
 sudo mv libonnxruntime.so.* /usr/local/lib/umbela/
 ```
@@ -79,7 +79,7 @@ sudo mv libonnxruntime.so.* /usr/local/lib/umbela/
 
    ```bash
    tar -xzf umbela-cli-darwin-arm64.tar.gz
-   sudo mv umbela /usr/local/bin/
+   sudo mv umbela-cli /usr/local/bin/
    # Apple Silicon only: the library used for face recognition
    sudo mkdir -p /usr/local/lib/umbela
    sudo mv libonnxruntime.*.dylib /usr/local/lib/umbela/
@@ -88,7 +88,7 @@ sudo mv libonnxruntime.so.* /usr/local/lib/umbela/
 3. The files are not signed or notarized yet. If macOS blocks them after a browser download, remove the quarantine flag:
 
    ```bash
-   sudo xattr -dr com.apple.quarantine /usr/local/bin/umbela /usr/local/lib/umbela
+   sudo xattr -dr com.apple.quarantine /usr/local/bin/umbela-cli /usr/local/lib/umbela
    ```
 
 > **Intel Macs:** the server works, but face recognition is not available, because ONNX Runtime does not publish a macOS Intel build.
@@ -101,21 +101,21 @@ Open a terminal in that folder and run it:
 
 ```powershell
 cd C:\Umbela
-.\umbela.exe create
+.\umbela-cli.exe create
 ```
 
 To run `umbela` from any folder, add that folder to your `PATH`. Your data is kept in `C:\Users\<you>\.umbela`.
 
 > The program is not signed yet, so Windows SmartScreen may show "Windows protected your PC". Choose **More info** and then **Run anyway**. Antivirus software may also warn about it because it starts Tor; the source code and the build are public in this repository.
 
-Keep `umbela.exe` together with the other files of the zip: it looks for `tor\tor.exe`, `data\` and the DLLs next to itself.
+Keep `umbela-cli.exe` together with the other files of the zip: it looks for `tor\tor.exe`, `data\` and the DLLs next to itself.
 
 ### Building from source
 
 You need Go (the version in `go.mod`), a C compiler, `pkg-config`, and the libvips and OpenSSL development packages (`libvips-dev libssl-dev` on Debian, `vips-devel openssl-devel` on Fedora, `libvips openssl` on Arch, `brew install vips pkgconf` on macOS).
 
 ```bash
-CGO_ENABLED=1 go build -o umbela ./cmd/umbela-cli
+CGO_ENABLED=1 go build -o umbela-cli ./cmd/umbela-cli
 ```
 
 Face recognition also needs the [ONNX Runtime](https://github.com/microsoft/onnxruntime/releases) shared library, version 1.31.0 exactly. Point `UMBELA_ORT_LIB` to it, or the server will start with face recognition turned off.
@@ -127,7 +127,7 @@ After installing, run the following commands from a terminal.
 ### 1. Create your Vault
 
 ```bash
-umbela create
+umbela-cli create
 ```
 
 Initializes a new encrypted Vault. You will be asked for a passphrase.
@@ -135,23 +135,23 @@ Initializes a new encrypted Vault. You will be asked for a passphrase.
 ### 2. Add your photos
 
 ```bash
-umbela add <username> <path-to-images>
+umbela-cli add <username> <path-to-images>
 ```
 
 The path can be a folder of regular images or a **Google Takeout ZIP** export. Both are supported.
 
 ```bash
 # Regular images
-umbela add alice ~/Pictures/vacation
+umbela-cli add alice ~/Pictures/vacation
 
 # Google Takeout ZIP
-umbela add alice ~/Downloads/takeout-20260101.zip
+umbela-cli add alice ~/Downloads/takeout-20260101.zip
 ```
 
 ### 3. Pair your phone
 
 ```bash
-umbela pair <username>
+umbela-cli pair <username>
 ```
 
 Pairs your phone with your Umbela server.
@@ -159,7 +159,7 @@ Pairs your phone with your Umbela server.
 ### 4. Start the server
 
 ```bash
-umbela start <username> 
+umbela-cli start <username> 
 ```
 
 Unlocks the Vault in RAM, starts the Tor daemon and brings your private `.onion` service online.
@@ -234,13 +234,13 @@ erDiagram
 ├── cmd
 │   ├── umbela-cli              # Command-line entry point
 │   │   ├── cmd
-│   │   │   ├── add.go          # `umbela add`: import images / Takeout ZIPs
-│   │   │   ├── create.go       # `umbela create`: initialize a new Vault
+│   │   │   ├── add.go          # `umbela-cli add`: import images / Takeout ZIPs
+│   │   │   ├── create.go       # `umbela-cli create`: initialize a new Vault
 │   │   │   ├── errors.go
 │   │   │   ├── middleware.go
-│   │   │   ├── pair.go         # `umbela <username> pair`: pair a phone
+│   │   │   ├── pair.go         # `umbela-cli <username> pair`: pair a phone
 │   │   │   ├── root.go         # Cobra root command
-│   │   │   └── start.go        # `umbela <username> start`: run the server
+│   │   │   └── start.go        # `umbela-cli <username> start`: run the server
 │   │   └── main.go
 │   └── umbela-desktop
 ├── go.mod
@@ -310,7 +310,7 @@ erDiagram
 Umbela uses [Cobra](https://github.com/spf13/cobra) for a structured, modular and extensible CLI.
 
 ```text
-umbela [command] [flags]
+umbela-cli [command] [flags]
 
 Main commands:
   create                      Initializes a new Vault: derives the KEK,

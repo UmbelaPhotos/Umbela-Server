@@ -6,8 +6,7 @@ description: Umbela server
 license: AGPL-3.0-only
 contents:
   - src: dist/umbela-cli
-    dst: /usr/bin/umbela
-  # ONNX Runtime for face recognition; the program looks for it in this folder.
+    dst: /usr/bin/umbela-cli
   - src: dist/libonnxruntime.so
     dst: /usr/lib/umbela/libonnxruntime.so
 overrides:

@@ -3,11 +3,14 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"umbela-server/internal/models"
+	"umbela-server/internal/storage"
 )
 
 func TestAlbumsAndDelete(t *testing.T) {
@@ -81,5 +84,75 @@ func TestAlbumsAndDelete(t *testing.T) {
 	list, _ = v.ListAlbums(ctx)
 	if list[0].PhotoCount != 1 || list[0].CoverPhotoId != "p1" {
 		t.Fatalf("after delete: %+v", list[0])
+	}
+}
+
+func TestAddPhotoToNamedAlbum(t *testing.T) {
+	v := seededVault(t, []models.Photo{
+		{ID: "p1", Hash: "h1", FilePath: "x", CapturedAt: 1},
+		{ID: "p2", Hash: "h2", FilePath: "x", CapturedAt: 2},
+		{ID: "p3", Hash: "h3", FilePath: "x", CapturedAt: 3},
+	})
+	ctx := context.Background()
+	albums := storage.NewAlbumRepository(v.db)
+
+	if err := albums.AddPhotoToNamedAlbum(ctx, "p1", "  "); err == nil {
+		t.Fatal("an empty album name should be refused")
+	}
+
+	// The album does not exist yet: it is created.
+	if err := albums.AddPhotoToNamedAlbum(ctx, "p1", "Viaje"); err != nil {
+		t.Fatal(err)
+	}
+	// It exists now: it is reused, and adding twice is fine.
+	for _, id := range []string{"p2", "p2", "p3"} {
+		if err := albums.AddPhotoToNamedAlbum(ctx, id, " Viaje "); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A different name is a different album.
+	if err := albums.AddPhotoToNamedAlbum(ctx, "p1", "Boda"); err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := v.ListAlbums(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := map[string]int32{}
+	for _, a := range list {
+		counts[a.Name] = a.PhotoCount
+	}
+	if len(list) != 2 || counts["Viaje"] != 3 || counts["Boda"] != 1 {
+		t.Fatalf("want Viaje=3 and Boda=1, got %v", counts)
+	}
+}
+
+// Photos of the same new album arriving together must not create it twice.
+func TestAddPhotoToNamedAlbumConcurrently(t *testing.T) {
+	photos := make([]models.Photo, 20)
+	for i := range photos {
+		photos[i] = models.Photo{ID: fmt.Sprintf("p%02d", i), Hash: fmt.Sprintf("h%d", i), FilePath: "x", CapturedAt: int64(i)}
+	}
+	v := seededVault(t, photos)
+	ctx := context.Background()
+	albums := storage.NewAlbumRepository(v.db)
+
+	var wg sync.WaitGroup
+	for _, p := range photos {
+		wg.Go(func() {
+			if err := albums.AddPhotoToNamedAlbum(ctx, p.ID, "Viaje"); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	wg.Wait()
+
+	list, err := v.ListAlbums(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].PhotoCount != 20 {
+		t.Fatalf("want one album with 20 photos, got %v", list)
 	}
 }

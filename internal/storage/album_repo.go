@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"uuid"
 
 	"umbela-server/internal/models"
@@ -99,14 +100,45 @@ func (r *AlbumRepository) ListWithCounts(ctx context.Context) ([]AlbumRow, error
 // AddPhoto puts a photo in an album. Adding it twice is not an error.
 func (r *AlbumRepository) AddPhoto(ctx context.Context, albumID, photoID string) error {
 	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
-		link := &models.AlbumPhoto{AlbumID: albumID, PhotoID: photoID}
-		if _, err := tx.NewInsert().Model(link).On("CONFLICT DO NOTHING").Exec(ctx); err != nil {
-			return fmt.Errorf("adding photo %s to album %s: %w", photoID, albumID, err)
-		}
-		_, err := tx.NewUpdate().Model((*models.Album)(nil)).
-			Set("updated_at = CURRENT_TIMESTAMP").
-			Where("id = ?", albumID).
-			Exec(ctx)
-		return err
+		return linkPhoto(ctx, tx, albumID, photoID)
 	})
+}
+
+// AddPhotoToNamedAlbum puts a photo in the album with that name
+func (r *AlbumRepository) AddPhotoToNamedAlbum(ctx context.Context, photoID, name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("album name is empty")
+	}
+	return r.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+		var albumID string
+		err := tx.NewSelect().
+			Model((*models.Album)(nil)).
+			Column("id").
+			Where("name = ?", name).
+			Limit(1).
+			Scan(ctx, &albumID)
+		if errors.Is(err, sql.ErrNoRows) {
+			album := &models.Album{ID: uuid.NewV7().String(), Name: name}
+			if _, err := tx.NewInsert().Model(album).Returning("").Exec(ctx); err != nil {
+				return fmt.Errorf("creating album %q: %w", name, err)
+			}
+			albumID = album.ID
+		} else if err != nil {
+			return fmt.Errorf("looking for album %q: %w", name, err)
+		}
+		return linkPhoto(ctx, tx, albumID, photoID)
+	})
+}
+
+func linkPhoto(ctx context.Context, tx bun.Tx, albumID, photoID string) error {
+	link := &models.AlbumPhoto{AlbumID: albumID, PhotoID: photoID}
+	if _, err := tx.NewInsert().Model(link).On("CONFLICT DO NOTHING").Exec(ctx); err != nil {
+		return fmt.Errorf("adding photo %s to album %s: %w", photoID, albumID, err)
+	}
+	_, err := tx.NewUpdate().Model((*models.Album)(nil)).
+		Set("updated_at = CURRENT_TIMESTAMP").
+		Where("id = ?", albumID).
+		Exec(ctx)
+	return err
 }

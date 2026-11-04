@@ -25,12 +25,14 @@ func (v *Vault) AddPhotos(ctx context.Context,addImagesPath string, lastDirIsAlb
 	}
 
 	photoRepo := storage.NewPhotoRepository(v.db)
+	albumRepo := storage.NewAlbumRepository(v.db)
 
 	ingestion.IngestPhotos(
 		ctx,
 		directoryFileGroups,
 		v.imageProcessor,
 		photoRepo,
+		albumRepo,
 		v.config,
 		false,
 		false,

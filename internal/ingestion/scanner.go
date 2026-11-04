@@ -66,7 +66,7 @@ func ScanDirectory(root string, extractDir string, lastDirIsAlbum bool) ([]*File
 			}
 			group.ImagePaths = append(group.ImagePaths, path)
 
-			if dir := filepath.Dir(path); dir != root && dir != extractDir {
+			if dir := filepath.Dir(path); lastDirIsAlbum && dir != root && dir != extractDir {
 				group.Album = filepath.Base(dir)
 			}
 			return nil
