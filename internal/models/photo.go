@@ -38,7 +38,7 @@ type Face struct {
 	PersonName string `bun:"person_name"`
 	// Embedding is the centroid (normalized mean) of the embeddings of all the
 	// faces assigned to this person, and Samples is how many that is.
-	CoverPhotoID string `bun:"cover_photo_id,type:text"`
+	CoverPhotoID string `bun:"cover_photo_id,type:text,nullzero"` // FK opcional a photos.id (NULL = sin portada)
 	Embedding    []byte `bun:"embedding,notnull"`
 	Samples      int    `bun:"samples,notnull,default:0"`
 

@@ -27,18 +27,7 @@ func TestMigrationAddsFaceColumnsToOldDatabase(t *testing.T) {
 	dir := t.TempDir()
 	key := make([]byte, 32)
 
-	dsn := fmt.Sprintf("%s?_pragma_key=x'%s'&_pragma_cipher_page_size=4096",
-		filepath.Join(dir, "database.db"), hex.EncodeToString(key))
-	old, err := sql.Open("sqlite3", dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, stmt := range oldSchema {
-		if _, err := old.Exec(stmt); err != nil {
-			t.Fatalf("%s: %v", stmt, err)
-		}
-	}
-	old.Close()
+	openOld(t, dir, key)
 
 	// Open it twice: the second time everything is already there.
 	for range 2 {
@@ -68,4 +57,21 @@ func TestMigrationAddsFaceColumnsToOldDatabase(t *testing.T) {
 		}
 		database.Close()
 	}
+}
+
+// openOld creates in dir a database with the old schema above.
+func openOld(t *testing.T, dir string, key []byte) {
+	t.Helper()
+	dsn := fmt.Sprintf("%s?_pragma_key=x'%s'&_pragma_cipher_page_size=4096",
+		filepath.Join(dir, "database.db"), hex.EncodeToString(key))
+	old, err := sql.Open("sqlite3", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range oldSchema {
+		if _, err := old.Exec(stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
+		}
+	}
+	old.Close()
 }

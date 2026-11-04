@@ -41,6 +41,9 @@ const (
 
 	// Pairs between these two values are reported in the log, to tune them.
 	personNearMissFloor = 0.30
+
+	// At most this many near misses are logged per pass.
+	maxNearMissLogs = 30
 )
 
 // person is a group of faces of the same individual, as kept in memory.
@@ -310,11 +313,7 @@ func (v *Vault) mergeSimilarPeople(ctx context.Context, repo *storage.FaceReposi
 				continue
 			}
 			sim := faces.Similarity(a.centroid, b.centroid)
-			if sim < personNearMissFloor {
-				continue
-			}
-			if sim < personMergeThreshold {
-				fmt.Printf("Face scan: people %s and %s are %.3f similar, not merged\n", a.id, b.id, sim)
+			if sim < personNearMissFloor || sim < personMergeThreshold {
 				continue
 			}
 			if a.name != "" && b.name != "" && a.name != b.name {

@@ -122,21 +122,29 @@ func addColumnIfMissing(ctx context.Context, db *bun.DB, table, column, definiti
 func runMigrations(db *bun.DB) error {
 	ctx := context.Background()
 
-	models := []interface{}{
-		(*models.Face)(nil),
-		(*models.Photo)(nil),
-		(*models.Album)(nil),
-		(*models.AlbumPhoto)(nil),
-		(*models.PhotoFace)(nil),
+	// A cover is optional (NULL) and has to be a photo that exists. When the
+	// photo is deleted the cover is cleared by the database itself.
+	const coverFK = `("cover_photo_id") REFERENCES "photos" ("id") ON DELETE SET NULL`
+
+	tables := []struct {
+		model any
+		fks   []string
+	}{
+		// photos goes first: faces and albums point to it.
+		{(*models.Photo)(nil), nil},
+		{(*models.Face)(nil), []string{coverFK}},
+		{(*models.Album)(nil), []string{coverFK}},
+		{(*models.AlbumPhoto)(nil), nil},
+		{(*models.PhotoFace)(nil), nil},
 	}
 
-	for _, model := range models {
-		_, err := db.NewCreateTable().
-			Model(model).
-			IfNotExists().
-			Exec(ctx)
-		if err != nil {
-			return fmt.Errorf("migrando %T: %w", model, err)
+	for _, t := range tables {
+		q := db.NewCreateTable().Model(t.model).IfNotExists()
+		for _, fk := range t.fks {
+			q = q.ForeignKey(fk)
+		}
+		if _, err := q.Exec(ctx); err != nil {
+			return fmt.Errorf("migrando %T: %w", t.model, err)
 		}
 	}
 
@@ -146,6 +154,8 @@ func runMigrations(db *bun.DB) error {
 		{"photos", "faces_scanned_at", "INTEGER NOT NULL DEFAULT 0"},
 		{"faces", "samples", "INTEGER NOT NULL DEFAULT 0"},
 		{"photo_faces", "embedding", "BLOB"},
+		// SQLite lets a column with a NULL default be added together with its foreign key.
+		{"faces", "cover_photo_id", `TEXT REFERENCES photos(id) ON DELETE SET NULL`},
 	} {
 		if err := addColumnIfMissing(ctx, db, c.table, c.column, c.definition); err != nil {
 			return err

@@ -133,7 +133,7 @@ func (r *FaceRepository) MergePeople(ctx context.Context, keepID, dropID string,
 			Set("embedding = ?", embedding).
 			Set("samples = ?", samples).
 			Set("person_name = CASE WHEN COALESCE(person_name, '') = '' THEN ? ELSE person_name END", drop.PersonName).
-			Set("cover_photo_id = CASE WHEN COALESCE(cover_photo_id, '') = '' THEN ? ELSE cover_photo_id END", drop.CoverPhotoID).
+			Set("cover_photo_id = CASE WHEN COALESCE(cover_photo_id, '') = '' THEN NULLIF(?, '') ELSE cover_photo_id END", drop.CoverPhotoID).
 			Where("id = ?", keepID).
 			Exec(ctx); err != nil {
 			return fmt.Errorf("updating person %s: %w", keepID, err)

@@ -14,7 +14,7 @@ type Album struct {
 	ID          string     `bun:"id,pk,type:text"`
 	Name        string    `bun:"name,notnull"`
 	Description string    `bun:"description"`
-	CoverPhotoID string    `bun:"cover_photo_id,type:text"` // FK opcional a photos.id
+	CoverPhotoID string    `bun:"cover_photo_id,type:text,nullzero"` // FK opcional a photos.id (NULL = sin portada)
 	CreatedAt   time.Time `bun:"created_at,nullzero,notnull,default:current_timestamp"`
 	UpdatedAt   time.Time `bun:"updated_at,nullzero,notnull,default:current_timestamp"`
 
