@@ -45,10 +45,7 @@ func (v *Vault) streamDecryptedFile(path string, stream *connect.ServerStream[pb
 
 	totalBytes := len(decryptedData)
 	for i := 0; i < totalBytes; i += chunkSize {
-		end := i + chunkSize
-		if end > totalBytes {
-			end = totalBytes
-		}
+		end := min(i + chunkSize, totalBytes)
 
 		chunk := &pb.Chunk{
 			Data: decryptedData[i:end],
