@@ -110,7 +110,7 @@ func (p *Processor) GenerateThumbnailAndBlurHash(srcPath, hash string, DEK []byt
 	}
 
 	ep := vips.NewWebpExportParams()
-	ep.Quality = 80
+	ep.Quality = 50
 	webpBytes, _, err := vipsImage.ExportWebp(ep)
 	if err != nil {
 		return nil, fmt.Errorf("exporting webp: %w", err)

@@ -72,11 +72,9 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 	}()
 
 	// People split by earlier scans (or by older thresholds) are joined first.
-	if err := v.mergeSimilarPeople(ctx, repo); err != nil && ctx.Err() == nil {
-		fmt.Printf("Face scan: merging people: %v\n", err)
-	}
+	_ = v.mergeSimilarPeople(ctx, repo)
 
-	scanned, found := 0, 0
+	scanned := 0
 	for {
 		pending, err := repo.PendingPhotos(ctx, faceScanBatch)
 		if err != nil {
@@ -85,11 +83,8 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 
 		if len(pending) == 0 {
 			if scanned > 0 {
-				fmt.Printf("Face scan finished: %d photos, %d faces\n", scanned, found)
-				scanned, found = 0, 0
-				if err := v.mergeSimilarPeople(ctx, repo); err != nil && ctx.Err() == nil {
-					fmt.Printf("Face scan: merging people: %v\n", err)
-				}
+				scanned = 0
+				_ = v.mergeSimilarPeople(ctx, repo)
 				people = nil // merged people are gone: reload before the next scan
 			}
 			select {
@@ -101,9 +96,6 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 		}
 
 		if engine == nil {
-			total, _ := repo.CountPending(ctx)
-			fmt.Printf("Face scan: %d photos pending\n", total)
-
 			engine, err = faces.NewEngine(faces.LibraryPath())
 			if err != nil {
 				return fmt.Errorf("starting the face engine: %w", err)
@@ -122,9 +114,8 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 				return nil
 			}
 
-			result, n, err := v.scanPhoto(engine, people, photo)
+			result, _, err := v.scanPhoto(engine, people, photo)
 			if err != nil {
-				fmt.Printf("Face scan: skipping photo %s: %v\n", photo.ID, err)
 				// Mark it as scanned so a damaged file is not retried forever.
 				result = storage.ScanResult{}
 			}
@@ -141,10 +132,6 @@ func (v *Vault) RunFaceScanner(ctx context.Context) error {
 			people = applyToPeople(people, result)
 
 			scanned++
-			found += n
-			if scanned%50 == 0 {
-				fmt.Printf("Face scan: %d photos done\n", scanned)
-			}
 		}
 	}
 }
@@ -334,9 +321,6 @@ func (v *Vault) mergeSimilarPeople(ctx context.Context, repo *storage.FaceReposi
 			gone[j] = true
 			merged++
 		}
-	}
-	if merged > 0 {
-		fmt.Printf("Face scan: merged %d duplicated people\n", merged)
 	}
 	return nil
 }

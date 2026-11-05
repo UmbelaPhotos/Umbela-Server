@@ -2,9 +2,7 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"time"
 
 	"connectrpc.com/connect"
 
@@ -16,15 +14,13 @@ import (
 const chunkSize = 64 * 1024 
 
 func (v *Vault) StreamThumbnail(ctx context.Context, photoID string, stream *connect.ServerStream[pb.Chunk]) error {
-	t0 := time.Now() // [perf]
 	var photo models.Photo
 	err := v.db.NewSelect().Model(&photo).Where("id = ?", photoID).Scan(ctx)
 	if err != nil {
 		return err
 	}
-	dbMs := time.Since(t0).Milliseconds() // [perf]
 
-	return v.streamDecryptedFile("thumb", photoID, dbMs, photo.ThumbPath, stream)
+	return v.streamDecryptedFile(photo.ThumbPath, stream)
 }
 
 func (v *Vault) StreamFullImage(ctx context.Context, photoID string, stream *connect.ServerStream[pb.Chunk]) error {
@@ -34,11 +30,10 @@ func (v *Vault) StreamFullImage(ctx context.Context, photoID string, stream *con
 		return err
 	}
 
-	return v.streamDecryptedFile("FULL", photoID, 0, photo.FilePath, stream)
+	return v.streamDecryptedFile(photo.FilePath, stream)
 }
 
-func (v *Vault) streamDecryptedFile(kind, photoID string, dbMs int64, path string, stream *connect.ServerStream[pb.Chunk]) error {
-	t1 := time.Now() // [perf]
+func (v *Vault) streamDecryptedFile(path string, stream *connect.ServerStream[pb.Chunk]) error {
 	encryptedData, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -47,12 +42,6 @@ func (v *Vault) streamDecryptedFile(kind, photoID string, dbMs int64, path strin
 	if err != nil {
 		return err
 	}
-	prepMs := time.Since(t1).Milliseconds() // [perf]
-	t2 := time.Now()                        // [perf]
-	defer func() {                          // [perf]
-		fmt.Printf("[perf] %s %s: %d KB, db=%dms read+decrypt=%dms send=%dms\n",
-			kind, photoID[:8], len(decryptedData)/1024, dbMs, prepMs, time.Since(t2).Milliseconds())
-	}()
 
 	totalBytes := len(decryptedData)
 	for i := 0; i < totalBytes; i += chunkSize {
