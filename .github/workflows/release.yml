@@ -184,8 +184,16 @@ jobs:
           # ONNX Runtime is built with MSVC and crashes in CreateEnv with the old
           # msvcp140.dll some Windows installs have, so it ships its own next to it.
           $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
-          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" | Select-Object -First 1
+          # The runner has several runtimes (VS 2019's 14.29 and VS 2022's 14.4x):
+          # take the newest one, by the version of its msvcp140.dll.
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" |
+            Where-Object { Test-Path "$($_.FullName)\msvcp140.dll" } |
+            Sort-Object { (Get-Item "$($_.FullName)\msvcp140.dll").VersionInfo.FileVersionRaw } -Descending |
+            Select-Object -First 1
           if (-not $crt) { throw "VC++ runtime not found in $vs" }
+          $ver = (Get-Item "$($crt.FullName)\msvcp140.dll").VersionInfo.FileVersionRaw
+          Write-Host "Using $($crt.FullName) ($ver)"
+          if ($ver -lt [version]"14.40") { throw "VC++ runtime $ver is too old for ONNX Runtime" }
           Copy-Item "$($crt.FullName)\*.dll" stage\
           foreach ($f in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
             if (-not (Test-Path "stage\$f")) { throw "$f missing from the zip" }
