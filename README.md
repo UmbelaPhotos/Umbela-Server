@@ -97,10 +97,16 @@ sudo mv libonnxruntime.so.* /usr/local/lib/umbela/
 
 Download `umbela-cli-windows-amd64.zip` and extract it to a folder of your choice, for example `C:\Umbela`. Everything it needs (Tor, the image libraries and the face recognition library) is inside, so there is nothing else to install.
 
-Open a terminal in that folder and run it:
+Windows marks the files of a downloaded zip as blocked, which can stop the DLLs from loading. Open a PowerShell in that folder and unblock them first:
 
 ```powershell
 cd C:\Umbela
+Get-ChildItem -Recurse | Unblock-File
+```
+
+Then run it:
+
+```powershell
 .\umbela-cli.exe create
 ```
 

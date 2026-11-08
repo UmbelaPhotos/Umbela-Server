@@ -178,6 +178,19 @@ jobs:
           unzip -q "$f"
           cp "onnxruntime-win-x64-${ORT_VERSION}/lib/onnxruntime.dll" stage/
 
+      - name: VC++ runtime (for ONNX Runtime)
+        shell: pwsh
+        run: |
+          # ONNX Runtime is built with MSVC and crashes in CreateEnv with the old
+          # msvcp140.dll some Windows installs have, so it ships its own next to it.
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $crt = Get-ChildItem "$vs\VC\Redist\MSVC\*\x64\Microsoft.VC*.CRT" | Select-Object -First 1
+          if (-not $crt) { throw "VC++ runtime not found in $vs" }
+          Copy-Item "$($crt.FullName)\*.dll" stage\
+          foreach ($f in "msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll") {
+            if (-not (Test-Path "stage\$f")) { throw "$f missing from the zip" }
+          }
+
       - name: Tor
         run: |
           f=tor-expert-bundle-windows-x86_64-${TOR_VERSION}.tar.gz
