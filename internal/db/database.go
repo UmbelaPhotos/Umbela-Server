@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -68,50 +69,40 @@ func InitDB(baseDir string, DEK []byte) (*bun.DB, error) {
 	// 4. Connection with bun
 	db := bun.NewDB(sqldb, sqlitedialect.New())
 
-	success = true
-
+	
 	// Register m2m models
 	db.RegisterModel((*models.AlbumPhoto)(nil))
 	db.RegisterModel((*models.PhotoFace)(nil))
-
+	
 	if err := runMigrations(db); err != nil {
 		return nil, fmt.Errorf("error en migraciones: %w", err)
 	}
+	
+	success = true
 
 	return db, nil
 }
 
-// addColumnIfMissing adds a column to an existing table when it is not there yet.
-func addColumnIfMissing(ctx context.Context, db *bun.DB, table, column, definition string) error {
-	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
-	if err != nil {
-		return fmt.Errorf("reading columns of %s: %w", table, err)
+// Close flushes the WAL into the main database file and closes the connection.
+// After a clean close SQLite removes the -wal and -shm files, so nothing is left
+// next to the encrypted database. It is safe to call with a nil db.
+//
+// The caller must make sure no query is still running; Close does not wait for them.
+func Close(db *bun.DB) error {
+	if db == nil {
+		return nil
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		var cid int
-		var name, ctype string
-		var notnull, pk int
-		var dflt sql.NullString
-		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return fmt.Errorf("reading columns of %s: %w", table, err)
-		}
-		if name == column {
-			return nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	rows.Close()
+	_, ckptErr := db.ExecContext(context.Background(), "PRAGMA wal_checkpoint(TRUNCATE)")
+	closeErr := db.Close()
 
-	if _, err := db.ExecContext(ctx,
-		fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, definition),
-	); err != nil {
-		return fmt.Errorf("adding %s.%s: %w", table, column, err)
+	if ckptErr != nil {
+		ckptErr = fmt.Errorf("checkpointing wal: %w", ckptErr)
 	}
-	return nil
+	if closeErr != nil {
+		closeErr = fmt.Errorf("closing database: %w", closeErr)
+	}
+	return errors.Join(ckptErr, closeErr)
 }
 
 // runMigrations creates the tables.
@@ -148,20 +139,6 @@ func runMigrations(db *bun.DB) error {
 		}
 	}
 
-	// CREATE TABLE IF NOT EXISTS does not touch tables that already exist, so
-	// the columns added after the first release are added here.
-	for _, c := range []struct{ table, column, definition string }{
-		{"photos", "faces_scanned_at", "INTEGER NOT NULL DEFAULT 0"},
-		{"faces", "samples", "INTEGER NOT NULL DEFAULT 0"},
-		{"photo_faces", "embedding", "BLOB"},
-		// SQLite lets a column with a NULL default be added together with its foreign key.
-		{"faces", "cover_photo_id", `TEXT REFERENCES photos(id) ON DELETE SET NULL`},
-	} {
-		if err := addColumnIfMissing(ctx, db, c.table, c.column, c.definition); err != nil {
-			return err
-		}
-	}
-
 	// The face scanner looks for photos that were not scanned yet.
 	if _, err := db.ExecContext(ctx,
 		`CREATE INDEX IF NOT EXISTS idx_photos_faces_pending ON photos (faces_scanned_at)`,
@@ -179,4 +156,3 @@ func runMigrations(db *bun.DB) error {
 
 	return nil
 }
-

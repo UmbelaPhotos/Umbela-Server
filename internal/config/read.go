@@ -15,12 +15,10 @@ func Read(dataDir string, KEK []byte) (*Config, error) {
 		return nil, fmt.Errorf("reading config file: %w", err)
 	}
 
-	// 16 bytes of salt + 12 nonce  
-	if len(fileBytes) < 28 {
+	if len(fileBytes) < 12 {
 		return nil, fmt.Errorf("unsufficient number of bytes")
 	}
-	dataBytes := fileBytes[16:]
-	decryptedBytes, err := crypto.DecryptGCM(dataBytes, KEK)
+	decryptedBytes, err := crypto.DecryptGCM(fileBytes, KEK)
 	if err != nil {
 		return nil, fmt.Errorf("decrypting config file: %w", err)
 	}

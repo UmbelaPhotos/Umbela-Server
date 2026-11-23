@@ -5,19 +5,18 @@ import (
 	"os"
 	"path/filepath"
 	"umbela-server/internal/config"
-	"umbela-server/internal/crypto"
 )
 
-func FindUserFolder(username string) (string, []byte, error) {
+func FindUserFolder(KEK []byte) (string, error) {
 	umbelaDir, err := config.UmbelaDir()
 
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	entries, err := os.ReadDir(umbelaDir)
 	if err != nil {
-		return "", nil, fmt.Errorf("couldn't read umbela dir: %w", err)
+		return "", fmt.Errorf("couldn't read umbela dir: %w", err)
 	}
 
 	// Iter for every user directory
@@ -26,28 +25,17 @@ func FindUserFolder(username string) (string, []byte, error) {
 			continue // Ignore files
 		}
 
-		folderHashedName := entry.Name()
-		configPath := filepath.Join(umbelaDir, folderHashedName, "config.bin")
+		folderName := entry.Name()
 
-		file, err := os.Open(configPath)
-		if err != nil {
-			// No config
+		folderPath := filepath.Join(umbelaDir, folderName)
+		
+        _, err = config.Read(folderPath, KEK)
+		if err != nil{
 			continue
 		}
 
-		salt := make([]byte, 16)
-		_, err = file.Read(salt)
-		file.Close()
-		if err != nil {
-			continue
-		}
-
-		plaintext := crypto.HashText(username, salt)
-
-		if plaintext == folderHashedName {
-			return filepath.Join(umbelaDir, folderHashedName), salt, nil
-		}
+		return folderPath, nil
 	}
 
-	return "", nil, ErrUserNotFound
+	return "", ErrUserNotFound
 }

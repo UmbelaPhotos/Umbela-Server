@@ -15,7 +15,7 @@ var noAlbums bool
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add photos to your personal library",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(1),
 	RunE:  RequireAuth(AddImages),
 }
 
@@ -29,7 +29,7 @@ func AddImages(cmd *cobra.Command, args []string) error {
     	crypto.CleanBytes(userSecrets.KEK)
 	}()
 
-	addImagesPath, err := filepath.Abs(args[1])
+	addImagesPath, err := filepath.Abs(args[0])
 	if err != nil {
 		return fmt.Errorf("converting to absolute path: %w\n", err)
 	}

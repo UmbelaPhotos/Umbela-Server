@@ -2,11 +2,13 @@ package tor
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
+	"strings"
 	"time"
 	"umbela-server/internal/config"
 
@@ -57,6 +59,63 @@ func (c *Controller) CreateOrRecoverKey() (ed25519.KeyPair, error) {
 	return key, nil
 }
 
+// addOnionV3 does what t.Listen, but with ClientAuthV3, that bine v0.2.0 does not support.
+func (c *Controller) addOnionV3(t *tor.Tor, key ed25519.KeyPair) (*tor.OnionService, error) {
+	if len(c.config.AuthorizedClients) == 0 {
+		return nil, fmt.Errorf("There's no clients")
+	}
+
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", c.config.APIPort))
+	if err != nil {
+		return nil, fmt.Errorf("listen local: %w", err)
+	}
+
+	flags := []string{"V3Auth"}
+	if c.config.OneHopTor {
+		flags = append(flags, "NonAnonymous")
+	}
+	blob := base64.StdEncoding.EncodeToString(key.PrivateKey())
+
+	var cmd strings.Builder
+	fmt.Fprintf(&cmd, "ADD_ONION ED25519-V3:%s Flags=%s Port=80,%s",
+		blob, strings.Join(flags, ","), ln.Addr().String())
+	for _, pub := range c.config.AuthorizedClients {
+		fmt.Fprintf(&cmd, " ClientAuthV3=%s", pub)
+	}
+
+	resp, err := t.Control.SendRequest("%s", cmd.String())
+	if err != nil {
+		ln.Close()
+		return nil, err
+	}
+	if !resp.IsOk() {
+		ln.Close()
+		return nil, fmt.Errorf("ADD_ONION: %s", resp.Err)
+	}
+
+	var id string
+	for _, l := range resp.Data {
+		if v, ok := strings.CutPrefix(l, "ServiceID="); ok {
+			id = v
+		}
+	}
+	if id == "" {
+		ln.Close()
+		return nil, errors.New("ADD_ONION sin ServiceID")
+	}
+
+	return &tor.OnionService{
+		ID:                        id,
+		Key:                       key,
+		Version3:                  true,
+		LocalListener:             ln,
+		RemotePorts:               []int{80},
+		CloseLocalListenerOnClose: true,
+		Tor:                       t, // así onion.Close() hace DEL_ONION
+	}, nil
+}
+
+
 func (c *Controller) Start(ctx context.Context) error {
 	key, err := c.CreateOrRecoverKey()
 	if err != nil {
@@ -101,16 +160,10 @@ func (c *Controller) Start(ctx context.Context) error {
 	}
 
 	s.Suffix = "Starting listening..."
-	onion, err := t.Listen(ctx, &tor.ListenConf{
-		RemotePorts:  []int{80},
-		LocalPort:    c.config.APIPort,
-		Key:          key,
-		Version3:     true,
-		NonAnonymous: c.config.OneHopTor,
-	})
+	onion, err := c.addOnionV3(t, key)
 	if err != nil {
 		t.Close()
-		return fmt.Errorf("error creando hidden service: %w", err)
+		return fmt.Errorf("creating hidden service: %w", err)
 	}
 
 	s.Suffix = "All done!"

@@ -78,6 +78,12 @@ const (
 	PhotoServiceSetAlbumCoverProcedure = "/umbela.v1.PhotoService/SetAlbumCover"
 	// PhotoServiceListPlacesProcedure is the fully-qualified name of the PhotoService's ListPlaces RPC.
 	PhotoServiceListPlacesProcedure = "/umbela.v1.PhotoService/ListPlaces"
+	// PhotoServiceFilterNewPhotosProcedure is the fully-qualified name of the PhotoService's
+	// FilterNewPhotos RPC.
+	PhotoServiceFilterNewPhotosProcedure = "/umbela.v1.PhotoService/FilterNewPhotos"
+	// PhotoServiceUploadPhotoProcedure is the fully-qualified name of the PhotoService's UploadPhoto
+	// RPC.
+	PhotoServiceUploadPhotoProcedure = "/umbela.v1.PhotoService/UploadPhoto"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -99,6 +105,8 @@ var (
 	photoServiceCreateAlbumMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("CreateAlbum")
 	photoServiceSetAlbumCoverMethodDescriptor      = photoServiceServiceDescriptor.Methods().ByName("SetAlbumCover")
 	photoServiceListPlacesMethodDescriptor         = photoServiceServiceDescriptor.Methods().ByName("ListPlaces")
+	photoServiceFilterNewPhotosMethodDescriptor    = photoServiceServiceDescriptor.Methods().ByName("FilterNewPhotos")
+	photoServiceUploadPhotoMethodDescriptor        = photoServiceServiceDescriptor.Methods().ByName("UploadPhoto")
 )
 
 // PhotoServiceClient is a client for the umbela.v1.PhotoService service.
@@ -122,6 +130,9 @@ type PhotoServiceClient interface {
 	CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error)
 	SetAlbumCover(context.Context, *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error)
 	ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error)
+	// Phone backup: ask which hashes the vault lacks, then upload those.
+	FilterNewPhotos(context.Context, *connect.Request[pb.FilterNewPhotosRequest]) (*connect.Response[pb.FilterNewPhotosResponse], error)
+	UploadPhoto(context.Context, *connect.Request[pb.UploadPhotoRequest]) (*connect.Response[pb.UploadPhotoResponse], error)
 }
 
 // NewPhotoServiceClient constructs a client for the umbela.v1.PhotoService service. By default, it
@@ -230,6 +241,18 @@ func NewPhotoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(photoServiceListPlacesMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		filterNewPhotos: connect.NewClient[pb.FilterNewPhotosRequest, pb.FilterNewPhotosResponse](
+			httpClient,
+			baseURL+PhotoServiceFilterNewPhotosProcedure,
+			connect.WithSchema(photoServiceFilterNewPhotosMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		uploadPhoto: connect.NewClient[pb.UploadPhotoRequest, pb.UploadPhotoResponse](
+			httpClient,
+			baseURL+PhotoServiceUploadPhotoProcedure,
+			connect.WithSchema(photoServiceUploadPhotoMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -251,6 +274,8 @@ type photoServiceClient struct {
 	createAlbum        *connect.Client[pb.CreateAlbumRequest, pb.CreateAlbumResponse]
 	setAlbumCover      *connect.Client[pb.SetAlbumCoverRequest, pb.SetAlbumCoverResponse]
 	listPlaces         *connect.Client[pb.ListPlacesRequest, pb.ListPlacesResponse]
+	filterNewPhotos    *connect.Client[pb.FilterNewPhotosRequest, pb.FilterNewPhotosResponse]
+	uploadPhoto        *connect.Client[pb.UploadPhotoRequest, pb.UploadPhotoResponse]
 }
 
 // GetTimeline calls umbela.v1.PhotoService.GetTimeline.
@@ -333,6 +358,16 @@ func (c *photoServiceClient) ListPlaces(ctx context.Context, req *connect.Reques
 	return c.listPlaces.CallUnary(ctx, req)
 }
 
+// FilterNewPhotos calls umbela.v1.PhotoService.FilterNewPhotos.
+func (c *photoServiceClient) FilterNewPhotos(ctx context.Context, req *connect.Request[pb.FilterNewPhotosRequest]) (*connect.Response[pb.FilterNewPhotosResponse], error) {
+	return c.filterNewPhotos.CallUnary(ctx, req)
+}
+
+// UploadPhoto calls umbela.v1.PhotoService.UploadPhoto.
+func (c *photoServiceClient) UploadPhoto(ctx context.Context, req *connect.Request[pb.UploadPhotoRequest]) (*connect.Response[pb.UploadPhotoResponse], error) {
+	return c.uploadPhoto.CallUnary(ctx, req)
+}
+
 // PhotoServiceHandler is an implementation of the umbela.v1.PhotoService service.
 type PhotoServiceHandler interface {
 	GetTimeline(context.Context, *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error)
@@ -354,6 +389,9 @@ type PhotoServiceHandler interface {
 	CreateAlbum(context.Context, *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error)
 	SetAlbumCover(context.Context, *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error)
 	ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error)
+	// Phone backup: ask which hashes the vault lacks, then upload those.
+	FilterNewPhotos(context.Context, *connect.Request[pb.FilterNewPhotosRequest]) (*connect.Response[pb.FilterNewPhotosResponse], error)
+	UploadPhoto(context.Context, *connect.Request[pb.UploadPhotoRequest]) (*connect.Response[pb.UploadPhotoResponse], error)
 }
 
 // NewPhotoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -458,6 +496,18 @@ func NewPhotoServiceHandler(svc PhotoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(photoServiceListPlacesMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	photoServiceFilterNewPhotosHandler := connect.NewUnaryHandler(
+		PhotoServiceFilterNewPhotosProcedure,
+		svc.FilterNewPhotos,
+		connect.WithSchema(photoServiceFilterNewPhotosMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	photoServiceUploadPhotoHandler := connect.NewUnaryHandler(
+		PhotoServiceUploadPhotoProcedure,
+		svc.UploadPhoto,
+		connect.WithSchema(photoServiceUploadPhotoMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/umbela.v1.PhotoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PhotoServiceGetTimelineProcedure:
@@ -492,6 +542,10 @@ func NewPhotoServiceHandler(svc PhotoServiceHandler, opts ...connect.HandlerOpti
 			photoServiceSetAlbumCoverHandler.ServeHTTP(w, r)
 		case PhotoServiceListPlacesProcedure:
 			photoServiceListPlacesHandler.ServeHTTP(w, r)
+		case PhotoServiceFilterNewPhotosProcedure:
+			photoServiceFilterNewPhotosHandler.ServeHTTP(w, r)
+		case PhotoServiceUploadPhotoProcedure:
+			photoServiceUploadPhotoHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -563,4 +617,12 @@ func (UnimplementedPhotoServiceHandler) SetAlbumCover(context.Context, *connect.
 
 func (UnimplementedPhotoServiceHandler) ListPlaces(context.Context, *connect.Request[pb.ListPlacesRequest]) (*connect.Response[pb.ListPlacesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.ListPlaces is not implemented"))
+}
+
+func (UnimplementedPhotoServiceHandler) FilterNewPhotos(context.Context, *connect.Request[pb.FilterNewPhotosRequest]) (*connect.Response[pb.FilterNewPhotosResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.FilterNewPhotos is not implemented"))
+}
+
+func (UnimplementedPhotoServiceHandler) UploadPhoto(context.Context, *connect.Request[pb.UploadPhotoRequest]) (*connect.Response[pb.UploadPhotoResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("umbela.v1.PhotoService.UploadPhoto is not implemented"))
 }

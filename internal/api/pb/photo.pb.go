@@ -2068,6 +2068,209 @@ func (x *ListPlacesResponse) GetPlaces() []*PlaceSummary {
 	return nil
 }
 
+type FilterNewPhotosRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Hex SHA-256 of the original files.
+	Hashes        []string `protobuf:"bytes,1,rep,name=hashes,proto3" json:"hashes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FilterNewPhotosRequest) Reset() {
+	*x = FilterNewPhotosRequest{}
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FilterNewPhotosRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FilterNewPhotosRequest) ProtoMessage() {}
+
+func (x *FilterNewPhotosRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FilterNewPhotosRequest.ProtoReflect.Descriptor instead.
+func (*FilterNewPhotosRequest) Descriptor() ([]byte, []int) {
+	return file_internal_api_proto_v1_photo_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *FilterNewPhotosRequest) GetHashes() []string {
+	if x != nil {
+		return x.Hashes
+	}
+	return nil
+}
+
+type FilterNewPhotosResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The subset of hashes the vault does not have yet.
+	Missing       []string `protobuf:"bytes,1,rep,name=missing,proto3" json:"missing,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FilterNewPhotosResponse) Reset() {
+	*x = FilterNewPhotosResponse{}
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FilterNewPhotosResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FilterNewPhotosResponse) ProtoMessage() {}
+
+func (x *FilterNewPhotosResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FilterNewPhotosResponse.ProtoReflect.Descriptor instead.
+func (*FilterNewPhotosResponse) Descriptor() ([]byte, []int) {
+	return file_internal_api_proto_v1_photo_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *FilterNewPhotosResponse) GetMissing() []string {
+	if x != nil {
+		return x.Missing
+	}
+	return nil
+}
+
+type UploadPhotoRequest struct {
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Data     []byte                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
+	Filename string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	// Used only when the file has no EXIF date.
+	CapturedAtUnix int64 `protobuf:"varint,3,opt,name=captured_at_unix,json=capturedAtUnix,proto3" json:"captured_at_unix,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *UploadPhotoRequest) Reset() {
+	*x = UploadPhotoRequest{}
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadPhotoRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadPhotoRequest) ProtoMessage() {}
+
+func (x *UploadPhotoRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadPhotoRequest.ProtoReflect.Descriptor instead.
+func (*UploadPhotoRequest) Descriptor() ([]byte, []int) {
+	return file_internal_api_proto_v1_photo_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *UploadPhotoRequest) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *UploadPhotoRequest) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *UploadPhotoRequest) GetCapturedAtUnix() int64 {
+	if x != nil {
+		return x.CapturedAtUnix
+	}
+	return 0
+}
+
+type UploadPhotoResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	PhotoId       string                 `protobuf:"bytes,1,opt,name=photo_id,json=photoId,proto3" json:"photo_id,omitempty"`
+	Duplicate     bool                   `protobuf:"varint,2,opt,name=duplicate,proto3" json:"duplicate,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadPhotoResponse) Reset() {
+	*x = UploadPhotoResponse{}
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadPhotoResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadPhotoResponse) ProtoMessage() {}
+
+func (x *UploadPhotoResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_api_proto_v1_photo_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadPhotoResponse.ProtoReflect.Descriptor instead.
+func (*UploadPhotoResponse) Descriptor() ([]byte, []int) {
+	return file_internal_api_proto_v1_photo_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *UploadPhotoResponse) GetPhotoId() string {
+	if x != nil {
+		return x.PhotoId
+	}
+	return ""
+}
+
+func (x *UploadPhotoResponse) GetDuplicate() bool {
+	if x != nil {
+		return x.Duplicate
+	}
+	return false
+}
+
 var File_internal_api_proto_v1_photo_proto protoreflect.FileDescriptor
 
 const file_internal_api_proto_v1_photo_proto_rawDesc = "" +
@@ -2203,8 +2406,18 @@ const file_internal_api_proto_v1_photo_proto_rawDesc = "" +
 	"\x05album\x18\x01 \x01(\v2\x17.umbela.v1.AlbumSummaryR\x05album\"\x13\n" +
 	"\x11ListPlacesRequest\"E\n" +
 	"\x12ListPlacesResponse\x12/\n" +
-	"\x06places\x18\x01 \x03(\v2\x17.umbela.v1.PlaceSummaryR\x06places2\xab\n" +
-	"\n" +
+	"\x06places\x18\x01 \x03(\v2\x17.umbela.v1.PlaceSummaryR\x06places\"0\n" +
+	"\x16FilterNewPhotosRequest\x12\x16\n" +
+	"\x06hashes\x18\x01 \x03(\tR\x06hashes\"3\n" +
+	"\x17FilterNewPhotosResponse\x12\x18\n" +
+	"\amissing\x18\x01 \x03(\tR\amissing\"n\n" +
+	"\x12UploadPhotoRequest\x12\x12\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12(\n" +
+	"\x10captured_at_unix\x18\x03 \x01(\x03R\x0ecapturedAtUnix\"N\n" +
+	"\x13UploadPhotoResponse\x12\x19\n" +
+	"\bphoto_id\x18\x01 \x01(\tR\aphotoId\x12\x1c\n" +
+	"\tduplicate\x18\x02 \x01(\bR\tduplicate2\xd3\v\n" +
 	"\fPhotoService\x12L\n" +
 	"\vGetTimeline\x12\x1d.umbela.v1.GetTimelineRequest\x1a\x1e.umbela.v1.GetTimelineResponse\x12a\n" +
 	"\x12GetTimelineBuckets\x12$.umbela.v1.GetTimelineBucketsRequest\x1a%.umbela.v1.GetTimelineBucketsResponse\x12E\n" +
@@ -2224,7 +2437,9 @@ const file_internal_api_proto_v1_photo_proto_rawDesc = "" +
 	"\vCreateAlbum\x12\x1d.umbela.v1.CreateAlbumRequest\x1a\x1e.umbela.v1.CreateAlbumResponse\x12R\n" +
 	"\rSetAlbumCover\x12\x1f.umbela.v1.SetAlbumCoverRequest\x1a .umbela.v1.SetAlbumCoverResponse\x12I\n" +
 	"\n" +
-	"ListPlaces\x12\x1c.umbela.v1.ListPlacesRequest\x1a\x1d.umbela.v1.ListPlacesResponseB\x1fZ\x1dumbela-server/internal/api/pbb\x06proto3"
+	"ListPlaces\x12\x1c.umbela.v1.ListPlacesRequest\x1a\x1d.umbela.v1.ListPlacesResponse\x12X\n" +
+	"\x0fFilterNewPhotos\x12!.umbela.v1.FilterNewPhotosRequest\x1a\".umbela.v1.FilterNewPhotosResponse\x12L\n" +
+	"\vUploadPhoto\x12\x1d.umbela.v1.UploadPhotoRequest\x1a\x1e.umbela.v1.UploadPhotoResponseB\x1fZ\x1dumbela-server/internal/api/pbb\x06proto3"
 
 var (
 	file_internal_api_proto_v1_photo_proto_rawDescOnce sync.Once
@@ -2238,7 +2453,7 @@ func file_internal_api_proto_v1_photo_proto_rawDescGZIP() []byte {
 	return file_internal_api_proto_v1_photo_proto_rawDescData
 }
 
-var file_internal_api_proto_v1_photo_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_internal_api_proto_v1_photo_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_internal_api_proto_v1_photo_proto_goTypes = []any{
 	(*Chunk)(nil),                      // 0: umbela.v1.Chunk
 	(*PhotoSummary)(nil),               // 1: umbela.v1.PhotoSummary
@@ -2278,6 +2493,10 @@ var file_internal_api_proto_v1_photo_proto_goTypes = []any{
 	(*CreateAlbumResponse)(nil),        // 35: umbela.v1.CreateAlbumResponse
 	(*ListPlacesRequest)(nil),          // 36: umbela.v1.ListPlacesRequest
 	(*ListPlacesResponse)(nil),         // 37: umbela.v1.ListPlacesResponse
+	(*FilterNewPhotosRequest)(nil),     // 38: umbela.v1.FilterNewPhotosRequest
+	(*FilterNewPhotosResponse)(nil),    // 39: umbela.v1.FilterNewPhotosResponse
+	(*UploadPhotoRequest)(nil),         // 40: umbela.v1.UploadPhotoRequest
+	(*UploadPhotoResponse)(nil),        // 41: umbela.v1.UploadPhotoResponse
 }
 var file_internal_api_proto_v1_photo_proto_depIdxs = []int32{
 	1,  // 0: umbela.v1.GetTimelineResponse.photos:type_name -> umbela.v1.PhotoSummary
@@ -2312,24 +2531,28 @@ var file_internal_api_proto_v1_photo_proto_depIdxs = []int32{
 	34, // 29: umbela.v1.PhotoService.CreateAlbum:input_type -> umbela.v1.CreateAlbumRequest
 	26, // 30: umbela.v1.PhotoService.SetAlbumCover:input_type -> umbela.v1.SetAlbumCoverRequest
 	36, // 31: umbela.v1.PhotoService.ListPlaces:input_type -> umbela.v1.ListPlacesRequest
-	3,  // 32: umbela.v1.PhotoService.GetTimeline:output_type -> umbela.v1.GetTimelineResponse
-	6,  // 33: umbela.v1.PhotoService.GetTimelineBuckets:output_type -> umbela.v1.GetTimelineBucketsResponse
-	0,  // 34: umbela.v1.PhotoService.StreamThumbnail:output_type -> umbela.v1.Chunk
-	0,  // 35: umbela.v1.PhotoService.StreamFullImage:output_type -> umbela.v1.Chunk
-	12, // 36: umbela.v1.PhotoService.GetPhotoDetails:output_type -> umbela.v1.GetPhotoDetailsResponse
-	14, // 37: umbela.v1.PhotoService.ToggleFavorite:output_type -> umbela.v1.ToggleFavoriteResponse
-	16, // 38: umbela.v1.PhotoService.DeletePhoto:output_type -> umbela.v1.DeletePhotoResponse
-	18, // 39: umbela.v1.PhotoService.AddPhotoToAlbum:output_type -> umbela.v1.AddPhotoToAlbumResponse
-	21, // 40: umbela.v1.PhotoService.ListPeople:output_type -> umbela.v1.ListPeopleResponse
-	23, // 41: umbela.v1.PhotoService.LabelPerson:output_type -> umbela.v1.LabelPersonResponse
-	31, // 42: umbela.v1.PhotoService.GetPersonDetails:output_type -> umbela.v1.GetPersonDetailsResponse
-	25, // 43: umbela.v1.PhotoService.SetPersonCover:output_type -> umbela.v1.SetPersonCoverResponse
-	33, // 44: umbela.v1.PhotoService.ListAlbums:output_type -> umbela.v1.ListAlbumsResponse
-	35, // 45: umbela.v1.PhotoService.CreateAlbum:output_type -> umbela.v1.CreateAlbumResponse
-	27, // 46: umbela.v1.PhotoService.SetAlbumCover:output_type -> umbela.v1.SetAlbumCoverResponse
-	37, // 47: umbela.v1.PhotoService.ListPlaces:output_type -> umbela.v1.ListPlacesResponse
-	32, // [32:48] is the sub-list for method output_type
-	16, // [16:32] is the sub-list for method input_type
+	38, // 32: umbela.v1.PhotoService.FilterNewPhotos:input_type -> umbela.v1.FilterNewPhotosRequest
+	40, // 33: umbela.v1.PhotoService.UploadPhoto:input_type -> umbela.v1.UploadPhotoRequest
+	3,  // 34: umbela.v1.PhotoService.GetTimeline:output_type -> umbela.v1.GetTimelineResponse
+	6,  // 35: umbela.v1.PhotoService.GetTimelineBuckets:output_type -> umbela.v1.GetTimelineBucketsResponse
+	0,  // 36: umbela.v1.PhotoService.StreamThumbnail:output_type -> umbela.v1.Chunk
+	0,  // 37: umbela.v1.PhotoService.StreamFullImage:output_type -> umbela.v1.Chunk
+	12, // 38: umbela.v1.PhotoService.GetPhotoDetails:output_type -> umbela.v1.GetPhotoDetailsResponse
+	14, // 39: umbela.v1.PhotoService.ToggleFavorite:output_type -> umbela.v1.ToggleFavoriteResponse
+	16, // 40: umbela.v1.PhotoService.DeletePhoto:output_type -> umbela.v1.DeletePhotoResponse
+	18, // 41: umbela.v1.PhotoService.AddPhotoToAlbum:output_type -> umbela.v1.AddPhotoToAlbumResponse
+	21, // 42: umbela.v1.PhotoService.ListPeople:output_type -> umbela.v1.ListPeopleResponse
+	23, // 43: umbela.v1.PhotoService.LabelPerson:output_type -> umbela.v1.LabelPersonResponse
+	31, // 44: umbela.v1.PhotoService.GetPersonDetails:output_type -> umbela.v1.GetPersonDetailsResponse
+	25, // 45: umbela.v1.PhotoService.SetPersonCover:output_type -> umbela.v1.SetPersonCoverResponse
+	33, // 46: umbela.v1.PhotoService.ListAlbums:output_type -> umbela.v1.ListAlbumsResponse
+	35, // 47: umbela.v1.PhotoService.CreateAlbum:output_type -> umbela.v1.CreateAlbumResponse
+	27, // 48: umbela.v1.PhotoService.SetAlbumCover:output_type -> umbela.v1.SetAlbumCoverResponse
+	37, // 49: umbela.v1.PhotoService.ListPlaces:output_type -> umbela.v1.ListPlacesResponse
+	39, // 50: umbela.v1.PhotoService.FilterNewPhotos:output_type -> umbela.v1.FilterNewPhotosResponse
+	41, // 51: umbela.v1.PhotoService.UploadPhoto:output_type -> umbela.v1.UploadPhotoResponse
+	34, // [34:52] is the sub-list for method output_type
+	16, // [16:34] is the sub-list for method input_type
 	16, // [16:16] is the sub-list for extension type_name
 	16, // [16:16] is the sub-list for extension extendee
 	0,  // [0:16] is the sub-list for field type_name
@@ -2346,7 +2569,7 @@ func file_internal_api_proto_v1_photo_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_api_proto_v1_photo_proto_rawDesc), len(file_internal_api_proto_v1_photo_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   38,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

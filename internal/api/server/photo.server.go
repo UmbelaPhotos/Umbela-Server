@@ -23,11 +23,26 @@ func NewPhotoServer(v *vault.Vault, keyAgent *auth.KeyAgent) *PhotoServer {
 	}
 }
 
-func (s *PhotoServer) GetTimeline(ctx context.Context, req *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error) {
-	// Comprobar que el Vault esté desbloqueado antes de consultar
+// acquire checks the session key is in RAM and keeps the vault open until the
+// returned release is called, so a Lock waits for this request to finish.
+func (s *PhotoServer) acquire() (func(), error) {
 	if !s.keyAgent.IsUnlocked() {
 		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
 	}
+	release, err := s.v.Acquire()
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	}
+	return release, nil
+}
+
+func (s *PhotoServer) GetTimeline(ctx context.Context, req *connect.Request[pb.GetTimelineRequest]) (*connect.Response[pb.GetTimelineResponse], error) {
+	// Comprobar que el Vault esté desbloqueado antes de consultar
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
+	}
+	defer release()
 
 	var (
 		photos []*pb.PhotoSummary
@@ -69,9 +84,11 @@ func (s *PhotoServer) GetTimeline(ctx context.Context, req *connect.Request[pb.G
 const maxTZOffsetSeconds = 15 * 3600
 
 func (s *PhotoServer) GetTimelineBuckets(ctx context.Context, req *connect.Request[pb.GetTimelineBucketsRequest]) (*connect.Response[pb.GetTimelineBucketsResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	tz := int(req.Msg.GetTzOffsetSeconds())
 	if tz < -maxTZOffsetSeconds || tz > maxTZOffsetSeconds {
@@ -86,27 +103,33 @@ func (s *PhotoServer) GetTimelineBuckets(ctx context.Context, req *connect.Reque
 }
 
 func (s *PhotoServer) StreamThumbnail(ctx context.Context, req *connect.Request[pb.GetThumbnailRequest], stream *connect.ServerStream[pb.Chunk]) error {
-	if !s.keyAgent.IsUnlocked() {
-		return connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return lockErr
 	}
+	defer release()
 
 	// Streaming de la miniatura en fragmentos
 	return s.v.StreamThumbnail(ctx, req.Msg.GetPhotoId(), stream)
 }
 
 func (s *PhotoServer) StreamFullImage(ctx context.Context, req *connect.Request[pb.GetFullImageRequest], stream *connect.ServerStream[pb.Chunk]) error {
-	if !s.keyAgent.IsUnlocked() {
-		return connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return lockErr
 	}
+	defer release()
 
 	// Streaming de la foto completa desencriptada en RAM
 	return s.v.StreamFullImage(ctx, req.Msg.GetPhotoId(), stream)
 }
 
 func (s *PhotoServer) GetPhotoDetails(ctx context.Context, req *connect.Request[pb.GetPhotoDetailsRequest]) (*connect.Response[pb.GetPhotoDetailsResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	details, err := s.v.GetPhotoDetails(ctx, req.Msg.GetPhotoId())
 	if errors.Is(err, vault.ErrPhotoNotFound) {
@@ -119,9 +142,11 @@ func (s *PhotoServer) GetPhotoDetails(ctx context.Context, req *connect.Request[
 }
 
 func (s *PhotoServer) ToggleFavorite(ctx context.Context, req *connect.Request[pb.ToggleFavoriteRequest]) (*connect.Response[pb.ToggleFavoriteResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	isFavorite, err := s.v.ToggleFavorite(ctx, req.Msg.GetPhotoId())
 	if err != nil {
@@ -134,9 +159,11 @@ func (s *PhotoServer) ToggleFavorite(ctx context.Context, req *connect.Request[p
 }
 
 func (s *PhotoServer) DeletePhoto(ctx context.Context, req *connect.Request[pb.DeletePhotoRequest]) (*connect.Response[pb.DeletePhotoResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	if err := s.v.DeletePhoto(ctx, req.Msg.GetPhotoId()); err != nil {
 		if errors.Is(err, vault.ErrPhotoNotFound) {
@@ -148,9 +175,11 @@ func (s *PhotoServer) DeletePhoto(ctx context.Context, req *connect.Request[pb.D
 }
 
 func (s *PhotoServer) AddPhotoToAlbum(ctx context.Context, req *connect.Request[pb.AddPhotoToAlbumRequest]) (*connect.Response[pb.AddPhotoToAlbumResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	err := s.v.AddPhotoToAlbum(ctx, req.Msg.GetPhotoId(), req.Msg.GetAlbumId())
 	if errors.Is(err, vault.ErrPhotoNotFound) || errors.Is(err, vault.ErrAlbumNotFound) {
@@ -163,9 +192,11 @@ func (s *PhotoServer) AddPhotoToAlbum(ctx context.Context, req *connect.Request[
 }
 
 func (s *PhotoServer) ListPeople(ctx context.Context, req *connect.Request[pb.ListPeopleRequest]) (*connect.Response[pb.ListPeopleResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	people, err := s.v.ListPeople(ctx)
 	if err != nil {
@@ -175,9 +206,11 @@ func (s *PhotoServer) ListPeople(ctx context.Context, req *connect.Request[pb.Li
 }
 
 func (s *PhotoServer) LabelPerson(ctx context.Context, req *connect.Request[pb.LabelPersonRequest]) (*connect.Response[pb.LabelPersonResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	person, err := s.v.LabelPerson(ctx, req.Msg.GetPersonId(), req.Msg.GetName())
 	if errors.Is(err, vault.ErrPersonNotFound) {
@@ -193,9 +226,11 @@ func (s *PhotoServer) LabelPerson(ctx context.Context, req *connect.Request[pb.L
 }
 
 func (s *PhotoServer) GetPersonDetails(ctx context.Context, req *connect.Request[pb.GetPersonDetailsRequest]) (*connect.Response[pb.GetPersonDetailsResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	details, err := s.v.GetPersonDetails(ctx, req.Msg.GetPersonId())
 	if errors.Is(err, vault.ErrPersonNotFound) {
@@ -208,9 +243,11 @@ func (s *PhotoServer) GetPersonDetails(ctx context.Context, req *connect.Request
 }
 
 func (s *PhotoServer) ListAlbums(ctx context.Context, req *connect.Request[pb.ListAlbumsRequest]) (*connect.Response[pb.ListAlbumsResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	albums, err := s.v.ListAlbums(ctx)
 	if err != nil {
@@ -220,9 +257,11 @@ func (s *PhotoServer) ListAlbums(ctx context.Context, req *connect.Request[pb.Li
 }
 
 func (s *PhotoServer) CreateAlbum(ctx context.Context, req *connect.Request[pb.CreateAlbumRequest]) (*connect.Response[pb.CreateAlbumResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	album, err := s.v.CreateAlbum(ctx, req.Msg.GetName())
 	if errors.Is(err, vault.ErrInvalidAlbumName) {
@@ -239,9 +278,11 @@ func (s *PhotoServer) ListPlaces(ctx context.Context, req *connect.Request[pb.Li
 }
 
 func (s *PhotoServer) SetPersonCover(ctx context.Context, req *connect.Request[pb.SetPersonCoverRequest]) (*connect.Response[pb.SetPersonCoverResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	person, err := s.v.SetPersonCover(ctx, req.Msg.GetPersonId(), req.Msg.GetPhotoId())
 	if errors.Is(err, vault.ErrPersonNotFound) {
@@ -257,9 +298,11 @@ func (s *PhotoServer) SetPersonCover(ctx context.Context, req *connect.Request[p
 }
 
 func (s *PhotoServer) SetAlbumCover(ctx context.Context, req *connect.Request[pb.SetAlbumCoverRequest]) (*connect.Response[pb.SetAlbumCoverResponse], error) {
-	if !s.keyAgent.IsUnlocked() {
-		return nil, connect.NewError(connect.CodeUnauthenticated, auth.ErrVaultLocked)
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
 	}
+	defer release()
 
 	album, err := s.v.SetAlbumCover(ctx, req.Msg.GetAlbumId(), req.Msg.GetPhotoId())
 	if errors.Is(err, vault.ErrAlbumNotFound) {
@@ -272,4 +315,35 @@ func (s *PhotoServer) SetAlbumCover(ctx context.Context, req *connect.Request[pb
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&pb.SetAlbumCoverResponse{Album: album}), nil
+}
+
+func (s *PhotoServer) FilterNewPhotos(ctx context.Context, req *connect.Request[pb.FilterNewPhotosRequest]) (*connect.Response[pb.FilterNewPhotosResponse], error) {
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
+	}
+	defer release()
+
+	missing, err := s.v.MissingHashes(ctx, req.Msg.GetHashes())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.FilterNewPhotosResponse{Missing: missing}), nil
+}
+
+func (s *PhotoServer) UploadPhoto(ctx context.Context, req *connect.Request[pb.UploadPhotoRequest]) (*connect.Response[pb.UploadPhotoResponse], error) {
+	release, lockErr := s.acquire()
+	if lockErr != nil {
+		return nil, lockErr
+	}
+	defer release()
+
+	id, dup, err := s.v.UploadPhoto(ctx, req.Msg.GetData(), req.Msg.GetFilename(), req.Msg.GetCapturedAtUnix())
+	if errors.Is(err, vault.ErrUnsupportedFile) {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+	return connect.NewResponse(&pb.UploadPhotoResponse{PhotoId: id, Duplicate: dup}), nil
 }

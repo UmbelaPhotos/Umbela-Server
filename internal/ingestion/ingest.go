@@ -135,6 +135,10 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 		metadata = &image.EXIFData{Title: filepath.Base(imagePath)}
 	}
 
+	if metadata.CapturedAt == 0 {
+		metadata.CapturedAt = group.CapturedAt
+	}
+
 	destPath := filepath.Join(imagesDir, hash+".umb")
 
 	photo := &models.Photo{
@@ -189,4 +193,11 @@ func processGroup(ctx context.Context, group *FileGroup, processor *image.Proces
 	}
 
 	return photo, nil
+}
+
+// IngestFile stores one file (a phone upload) and returns its photo. The photo
+// is nil when the vault already had it.
+func IngestFile(ctx context.Context, path string, capturedAt int64, processor *image.Processor, repo *storage.PhotoRepository, albums *storage.AlbumRepository, config *config.VaultConfig) (*models.Photo, error) {
+	group := &FileGroup{ImagePaths: []string{path}, CapturedAt: capturedAt}
+	return processGroup(ctx, group, processor, repo, albums, config.ImageDir, false, false, config.DEK)
 }

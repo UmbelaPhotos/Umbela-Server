@@ -6,8 +6,8 @@ import (
 	"io"
 )
 
-// Unique per user
-// Salt will be saved in the first 16 bytes of the config
+const SaltLen = 32
+
 func RandomBytes(length int) ([]byte, error) {
 	salt := make([]byte, length)
 	_, err := io.ReadFull(rand.Reader, salt)

@@ -1,11 +1,12 @@
 package cmd
 
 import (
-	"slices"
+	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"umbela-server/internal/config"
 	"umbela-server/internal/crypto"
 	"umbela-server/internal/vault"
@@ -35,51 +36,44 @@ func Chain(finalFunc CommandRun, middlewares ...Middleware) CommandRun {
 }
 
 func RequireAuth(next CommandRun) CommandRun {
-	return func(cmd *cobra.Command, args []string) error {
-		username := args[0]
-		passwordBytes, err := ReadPasswordClean("Enter your password: ")
+    return func(cmd *cobra.Command, args []string) error {
+        reader := bufio.NewReader(os.Stdin)
 
-		if err != nil {
+        fmt.Print("Username: ")
+        text, _ := reader.ReadString('\n')
+        username := strings.TrimSpace(text)
+		fmt.Print("\033[1A\033[2K\r")
+
+        passwordBytes, err := ReadPasswordClean("Enter your password: ")
+        if err != nil {
+            return err
+        }
+        defer func() {
+            crypto.CleanBytes(passwordBytes)
+        }()
+
+		salt, err := config.GetSalt()
+
+
+		KEK := crypto.DeriveKEK(username, passwordBytes, salt)
+
+        userFolder, err := vault.FindUserFolder(KEK)
+        if err!=nil{
 			return err
 		}
+		fmt.Println(userFolder)
 
-		userFolder, userSalt, err := vault.FindUserFolder(username)
-		if errors.Is(err, vault.ErrUserNotFound) {
-			return ErrUserOrPasswordIncorrect
-		} else if err != nil {
-			return fmt.Errorf("system error: %w", err)
-		}
+        fmt.Println("Logged in")
 
-		KEK := crypto.DeriveKEK(passwordBytes, userSalt)
+        ctx := cmd.Context()
+        ctx = context.WithValue(ctx, CtxKeyKEK, KEK)
+        ctx = context.WithValue(ctx, CtxKeyVaultPath, userFolder)
+        ctx = context.WithValue(ctx, CtxKeySalt, salt)
 
-		// Check password
-		_,err = config.Read(userFolder, KEK)
-		if err!=nil{
-			return err
-		}
+        cmd.SetContext(ctx)
 
-		fmt.Println("Logged in")
-
-		ctx := cmd.Context()
-		ctx = context.WithValue(ctx, CtxKeyKEK, KEK)
-		ctx = context.WithValue(ctx, CtxKeyVaultPath, userFolder)
-		ctx = context.WithValue(ctx, CtxKeySalt, userSalt)
-
-		cmd.SetContext(ctx)
-
-		return next(cmd, args)
-	}
-}
-
-func RequireUsername(username string) (string, error) {
-	// Check for the config file
-	userVault, _, err := vault.FindUserFolder(username)
-
-	if errors.Is(err, vault.ErrUserNotFound) {
-		return "", err
-	}
-
-	return userVault, nil
+        return next(cmd, args)
+    }
 }
 
 func ReadPasswordClean(textPrompt string) ([]byte, error) {
@@ -95,7 +89,7 @@ func ReadPasswordClean(textPrompt string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading password: %w", err)
 	}
-	fmt.Println()
+	fmt.Print("\033[2K\r")
 
 	return passwordBytes, nil
 }

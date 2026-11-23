@@ -11,7 +11,7 @@ contents:
     dst: /usr/lib/umbela/libonnxruntime.so
 overrides:
   deb:
-    depends: [libvips42, libssl3, tor]
+    depends: [libvips42, libssl3, "tor (>= 0.4.8)"]
   rpm:
     depends: [vips, openssl-libs, tor]
   archlinux:

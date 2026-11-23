@@ -1,11 +1,12 @@
 package vault
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"umbela-server/internal/config"
 	"umbela-server/internal/db"
 	"umbela-server/internal/image"
-	"umbela-server/internal/tor"
 
 	"github.com/uptrace/bun"
 )
@@ -14,9 +15,17 @@ type Vault struct {
 	path           string
 	db             *bun.DB
 	imageProcessor *image.Processor
-	torController  *tor.Controller
+	config         *config.VaultConfig
 
-	config *config.VaultConfig
+	// mu protects db and the DEK: requests hold it for reading (see Acquire),
+	// Lock and Unlock take it for writing.
+	mu sync.RWMutex
+
+	// Face scanner lifecycle (see lock.go).
+	scanMu     sync.Mutex
+	scanParent context.Context
+	scanCancel context.CancelFunc
+	scanDone   chan struct{}
 }
 
 func NewVault(path string, cfg *config.VaultConfig) *Vault {
@@ -39,5 +48,22 @@ func (v *Vault) SetUp() error {
 		return err
 	}
 	fmt.Println("Connected to db")
+	return nil
+}
+
+func (v *Vault) ShutDown() error {
+	if v.imageProcessor != nil {
+		v.imageProcessor.Shutdown()
+		v.imageProcessor = nil
+	}
+
+	if v.db != nil {
+		err := db.Close(v.db)
+		v.db = nil
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

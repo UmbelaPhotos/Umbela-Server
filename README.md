@@ -46,6 +46,31 @@ Download the file for your system from the [**Releases**](../../releases) page. 
 
 The packages install the `umbela` command system-wide and pull in everything it needs (libvips, OpenSSL and Tor) automatically.
 
+#### Debian / Ubuntu: enable the Tor Project repository first
+
+Do not use the `tor` package from Ubuntu's `universe`: it has not been reliably updated and can miss stability and security fixes. Debian ships the LTS version, which may also be behind. The Tor Project publishes its own repository (`amd64` and `arm64` only) for current Debian and Ubuntu releases. Enable it **before** installing `umbela`:
+
+```bash
+sudo dpkg --print-architecture   # must print amd64 or arm64
+sudo apt install apt-transport-https gnupg wget lsb-release
+
+wget -qO- https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc \
+  | gpg --dearmor | sudo tee /usr/share/keyrings/deb.torproject.org-keyring.gpg >/dev/null
+
+sudo tee /etc/apt/sources.list.d/tor.sources >/dev/null <<EOF2
+Types: deb deb-src
+URIs: https://deb.torproject.org/torproject.org/
+Suites: $(lsb_release -sc)
+Components: main
+Signed-By: /usr/share/keyrings/deb.torproject.org-keyring.gpg
+EOF2
+
+sudo apt update
+sudo apt install tor deb.torproject.org-keyring
+```
+
+On old releases whose APT does not support the deb822 `.sources` format, use a `tor.list` file instead; see the [Tor Project instructions](https://support.torproject.org/apt/tor-deb-repo/).
+
 | Distribution | File | Install |
 |---|---|---|
 | Debian, Ubuntu, Raspberry Pi OS (64-bit) | `.deb` | `sudo apt install ./umbela_*.deb` |

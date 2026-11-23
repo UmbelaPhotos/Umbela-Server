@@ -8,10 +8,16 @@ import (
 	"umbela-server/internal/storage"
 )
 
-func (v *Vault) AddPhotos(ctx context.Context,addImagesPath string, lastDirIsAlbum bool) error{
-	if err := v.SetUp(); err !=nil{
+func (v *Vault) AddPhotos(ctx context.Context, addImagesPath string, lastDirIsAlbum bool) error {
+	if err := v.SetUp(); err != nil {
+		v.ShutDown()
 		return err
 	}
+	defer func() {
+		if err := v.ShutDown(); err != nil {
+			fmt.Printf("closing vault: %v\n", err)
+		}
+	}()
 
 	extractDir, err := os.MkdirTemp(addImagesPath, "umbela-extract-*")
 	if err != nil {

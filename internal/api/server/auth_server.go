@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"time"
@@ -50,19 +49,15 @@ func (s *AuthServer) Unlock(ctx context.Context, req *connect.Request[pb.UnlockR
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("KEK vacía"))
 	}
 
-	// Verificar si la clave enviada por la app es correcta.
-	// Si el servidor ya está desbloqueado (por CLI), comparamos en RAM.
-	if s.keyAgent.IsUnlocked() {
-		currentKey, _ := s.keyAgent.GetKey()
-		if !bytes.Equal(currentKey, kek) {
+	// Validar la KEK descifrando la config del vault (da la DEK) y, si el
+	// vault estaba bloqueado, reabrir la base de datos.
+	if err := s.v.Unlock(kek); err != nil {
+		if errors.Is(err, vault.ErrInvalidPassword) {
 			return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("KEK incorrecta"))
 		}
-	} else {
-		// Si el servidor estaba bloqueado, intenta desbloquear el Vault (necesitarás este método en vault.go)
-		// err := s.v.ValidateAndLoadKEK(kek)
-		// if err != nil { return err }
-		s.keyAgent.SetKey(kek)
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
+	s.keyAgent.SetKey(kek)
 
 	// Emitir token de sesión para la app móvil
 	token, expiresAt, err := s.sessions.Create(24 * time.Hour)
@@ -84,5 +79,8 @@ func (s *AuthServer) GetStatus(ctx context.Context, req *connect.Request[pb.GetS
 func (s *AuthServer) Lock(ctx context.Context, req *connect.Request[pb.LockRequest]) (*connect.Response[pb.LockResponse], error) {
 	s.keyAgent.ClearKey()
 	s.sessions.DestroyAll()
+	if err := s.v.Lock(); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
 	return connect.NewResponse(&pb.LockResponse{Success: true}), nil
 }

@@ -27,7 +27,11 @@ func Run(ctx context.Context, cfg *config.ServerConfig, v *vault.Vault, torCtrl 
 
 	// 2. Configurar Interceptor (requiere Bearer token en RAM)
 	authInterceptor := interceptors.NewAuthInterceptor(sessionStore)
-	connectOpts := connect.WithInterceptors(authInterceptor)
+	// Phone uploads are whole photos: the default 4 MB cap is too small.
+	connectOpts := connect.WithHandlerOptions(
+		connect.WithInterceptors(authInterceptor),
+		connect.WithReadMaxBytes(64<<20),
+	)
 
 	// 3. Crear los Servidores (handlers) inyectando dependencias
 	authHandlerImpl := NewAuthServer(v, sessionStore, keyAgent, torCtrl)
@@ -72,26 +76,19 @@ func Run(ctx context.Context, cfg *config.ServerConfig, v *vault.Vault, torCtrl 
 		}
 	}()
 
-	// Face recognition runs in the background while the server is up. If it
-	// cannot start (for example the ONNX Runtime library is missing) the rest
-	// of the server keeps working.
-	scanCtx, stopScan := context.WithCancel(ctx)
-	scanDone := make(chan struct{})
-	go func() {
-		defer close(scanDone)
-		if err := v.RunFaceScanner(scanCtx); err != nil && scanCtx.Err() == nil {
-			fmt.Printf("Face recognition is off: %v\n", err)
-		}
-	}()
+	// Face recognition runs in the background while the vault is unlocked. If
+	// it cannot start (for example the ONNX Runtime library is missing) the
+	// rest of the server keeps working.
+	v.StartFaceScanner(ctx)
 
-	<-stopChan
+	// A cancelled ctx stops the server too (the background process uses it on Windows).
+	select {
+	case <-stopChan:
+	case <-ctx.Done():
+	}
 	fmt.Println("\nShutting down server and removing RAM...")
 
-	stopScan()
-	select {
-	case <-scanDone:
-	case <-time.After(10 * time.Second):
-	}
+	v.StopFaceScanner()
 
 	keyAgent.ClearKey()
 	sessionStore.DestroyAll()

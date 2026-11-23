@@ -26,6 +26,9 @@ type FileGroup struct {
 	ImagePaths []string
 	JSONPath   string
 	Album      string
+
+	// CapturedAt is used when the file carries no date of its own.
+	CapturedAt int64
 }
 
 func ScanDirectory(root string, extractDir string, lastDirIsAlbum bool) ([]*FileGroup, error) {

@@ -2,6 +2,8 @@ package vault
 
 import "errors"
 
+var ErrUserAlreadyExists = errors.New("user already exists")
+
 // ErrUserNotFound es un error tipado y único en memoria
 var ErrUserNotFound = errors.New("user doesn't exists")
 
@@ -31,3 +33,6 @@ var ErrPhotoNotInAlbum = errors.New("photo is not in the album")
 
 // ErrPhotoNotOfPerson is returned when a person's cover is a photo they are not in.
 var ErrPhotoNotOfPerson = errors.New("person is not in the photo")
+
+// ErrLocked is returned when the vault database is closed (see Vault.Lock).
+var ErrLocked = errors.New("vault is locked")

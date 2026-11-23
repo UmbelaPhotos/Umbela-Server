@@ -27,6 +27,10 @@ service PhotoService {
   rpc SetAlbumCover(SetAlbumCoverRequest) returns (SetAlbumCoverResponse);
 
   rpc ListPlaces(ListPlacesRequest) returns (ListPlacesResponse);
+
+  // Phone backup: ask which hashes the vault lacks, then upload those.
+  rpc FilterNewPhotos(FilterNewPhotosRequest) returns (FilterNewPhotosResponse);
+  rpc UploadPhoto(UploadPhotoRequest) returns (UploadPhotoResponse);
 }
 
 message Chunk {
@@ -208,4 +212,23 @@ message CreateAlbumResponse {
 message ListPlacesRequest {}
 message ListPlacesResponse {
   repeated PlaceSummary places = 1;
+}
+message FilterNewPhotosRequest {
+  // Hex SHA-256 of the original files.
+  repeated string hashes = 1;
+}
+message FilterNewPhotosResponse {
+  // The subset of hashes the vault does not have yet.
+  repeated string missing = 1;
+}
+
+message UploadPhotoRequest {
+  bytes data = 1;
+  string filename = 2;
+  // Used only when the file has no EXIF date.
+  int64 captured_at_unix = 3;
+}
+message UploadPhotoResponse {
+  string photo_id = 1;
+  bool duplicate = 2;
 }

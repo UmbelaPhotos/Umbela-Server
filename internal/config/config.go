@@ -13,22 +13,23 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	APIPort    int    `json:"api_port"`
-	TorPort	   int	  `json:"tor_port"`
-	TorEnabled bool   `json:"tor_enabled"`
-	OneHopTor  bool   `json:"one_hop_enabled"`
-	TorEd25519 []byte `json:"tor_ed25519,omitempty"`
-	WorkerCount int `json:"worker_count"`
+	APIPort           int      `json:"api_port"`
+	TorPort           int      `json:"tor_port"`
+	TorEnabled        bool     `json:"tor_enabled"`
+	OneHopTor         bool     `json:"one_hop_enabled"`
+	TorEd25519        []byte   `json:"tor_ed25519,omitempty"`
+	AuthorizedClients []string `json:"authorized_clients,omitempty"`
+	WorkerCount       int      `json:"worker_count"`
 }
 
 type VaultConfig struct {
-	DEK []byte `json:"encrypted_dek"`
-	DataDir      string `json:"data_dir"`
-	ImageDir     string `json:"image_dir"`
-	ThumbsDir    string `json:"thumbs_dir"`
-	DBPath       string `json:"db_path"`
-	ThumbWidth   int    `json:"thumb_width"`
-	ThumbHeight  int    `json:"thumb_height"`
+	DEK         []byte `json:"encrypted_dek"`
+	DataDir     string `json:"data_dir"`
+	ImageDir    string `json:"image_dir"`
+	ThumbsDir   string `json:"thumbs_dir"`
+	DBPath      string `json:"db_path"`
+	ThumbWidth  int    `json:"thumb_width"`
+	ThumbHeight int    `json:"thumb_height"`
 }
 
 // DefaultConfig returns the configuration with the user home paths.
@@ -43,21 +44,21 @@ func DefaultConfig(userPath string) (*Config, error) {
 	}
 
 	DEK, err := crypto.RandomBytes(32)
-	if err!=nil{
+	if err != nil {
 		return nil, fmt.Errorf("creating DEK: %w", err)
 	}
 
 	return &Config{
 		Vault: VaultConfig{
-			DEK: 		 DEK,
-			DataDir:     userPath,
-			ImageDir:    filepath.Join(userPath, "images"),
-			ThumbsDir:   filepath.Join(userPath, "thumbs"),
-			DBPath:      filepath.Join(userPath, "umbela.db"),
+			DEK:       DEK,
+			DataDir:   userPath,
+			ImageDir:  filepath.Join(userPath, "images"),
+			ThumbsDir: filepath.Join(userPath, "thumbs"),
+			DBPath:    filepath.Join(userPath, "umbela.db"),
 		},
 		Server: ServerConfig{
 			APIPort:     41110,
-			TorPort: 	 41111,
+			TorPort:     41111,
 			TorEnabled:  true,
 			OneHopTor:   true,
 			TorEd25519:  nil,
