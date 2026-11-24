@@ -37,6 +37,10 @@ func NewEngine(ortLibPath string) (*Engine, error) {
 		if err := ort.InitializeEnvironment(); err != nil {
 			return nil, fmt.Errorf("initializing ONNX Runtime: %w", err)
 		}
+		// Privacy: never let the runtime send usage telemetry.
+		if err := ort.DisableTelemetry(); err != nil {
+			return nil, fmt.Errorf("disabling ONNX Runtime telemetry: %w", err)
+		}
 	}
 
 	det, err := newDetector(yunetModel)
