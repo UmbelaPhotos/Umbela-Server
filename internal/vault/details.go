@@ -49,5 +49,8 @@ func (v *Vault) GetPhotoDetails(ctx context.Context, photoID string) (*pb.PhotoD
 		EncryptedAtRest: true,
 		Favorite:        p.Favorite,
 		Faces:           found,
+		Title:           p.Title,
+		Description:     p.Description,
+		AddedAtUnix:     p.CreatedAt.Unix(),
 	}, nil
 }

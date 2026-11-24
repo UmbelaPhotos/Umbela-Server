@@ -107,6 +107,10 @@ message PhotoDetails {
   bool encrypted_at_rest = 8;
   bool favorite = 9;
   repeated FaceInPhoto faces = 10;
+  string title = 11;
+  string description = 12;
+  // When the photo reached the vault.
+  int64 added_at_unix = 13;
 }
 message GetPhotoDetailsRequest {
   string photo_id = 1;

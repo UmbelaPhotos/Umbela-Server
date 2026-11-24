@@ -640,8 +640,12 @@ type PhotoDetails struct {
 	EncryptedAtRest bool                   `protobuf:"varint,8,opt,name=encrypted_at_rest,json=encryptedAtRest,proto3" json:"encrypted_at_rest,omitempty"`
 	Favorite        bool                   `protobuf:"varint,9,opt,name=favorite,proto3" json:"favorite,omitempty"`
 	Faces           []*FaceInPhoto         `protobuf:"bytes,10,rep,name=faces,proto3" json:"faces,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	Title           string                 `protobuf:"bytes,11,opt,name=title,proto3" json:"title,omitempty"`
+	Description     string                 `protobuf:"bytes,12,opt,name=description,proto3" json:"description,omitempty"`
+	// When the photo reached the vault.
+	AddedAtUnix   int64 `protobuf:"varint,13,opt,name=added_at_unix,json=addedAtUnix,proto3" json:"added_at_unix,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PhotoDetails) Reset() {
@@ -742,6 +746,27 @@ func (x *PhotoDetails) GetFaces() []*FaceInPhoto {
 		return x.Faces
 	}
 	return nil
+}
+
+func (x *PhotoDetails) GetTitle() string {
+	if x != nil {
+		return x.Title
+	}
+	return ""
+}
+
+func (x *PhotoDetails) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PhotoDetails) GetAddedAtUnix() int64 {
+	if x != nil {
+		return x.AddedAtUnix
+	}
+	return 0
 }
 
 type GetPhotoDetailsRequest struct {
@@ -2318,7 +2343,7 @@ const file_internal_api_proto_v1_photo_proto_rawDesc = "" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1e\n" +
 	"\n" +
 	"confidence\x18\x03 \x01(\x02R\n" +
-	"confidence\"\xda\x02\n" +
+	"confidence\"\xb6\x03\n" +
 	"\fPhotoDetails\x121\n" +
 	"\asummary\x18\x01 \x01(\v2\x17.umbela.v1.PhotoSummaryR\asummary\x12\x1a\n" +
 	"\buploader\x18\x02 \x01(\tR\buploader\x12\x1d\n" +
@@ -2331,7 +2356,10 @@ const file_internal_api_proto_v1_photo_proto_rawDesc = "" +
 	"\x11encrypted_at_rest\x18\b \x01(\bR\x0fencryptedAtRest\x12\x1a\n" +
 	"\bfavorite\x18\t \x01(\bR\bfavorite\x12,\n" +
 	"\x05faces\x18\n" +
-	" \x03(\v2\x16.umbela.v1.FaceInPhotoR\x05faces\"3\n" +
+	" \x03(\v2\x16.umbela.v1.FaceInPhotoR\x05faces\x12\x14\n" +
+	"\x05title\x18\v \x01(\tR\x05title\x12 \n" +
+	"\vdescription\x18\f \x01(\tR\vdescription\x12\"\n" +
+	"\radded_at_unix\x18\r \x01(\x03R\vaddedAtUnix\"3\n" +
 	"\x16GetPhotoDetailsRequest\x12\x19\n" +
 	"\bphoto_id\x18\x01 \x01(\tR\aphotoId\"H\n" +
 	"\x17GetPhotoDetailsResponse\x12-\n" +
