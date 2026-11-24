@@ -21,7 +21,12 @@ func UmbelaDir() (string, error) {
 		}
 		home = u.HomeDir
 	}
-	return filepath.Join(home, ".umbela"), nil
+	umbelaPath:=filepath.Join(home, ".umbela")
+	err = os.MkdirAll(umbelaPath, 0700)
+	if err!=nil{
+		return "", fmt.Errorf("creating umbela dir: %w", err)
+	}
+	return umbelaPath, nil
 }
 
 
